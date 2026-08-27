@@ -1,0 +1,9 @@
+{
+  "name": "Living Room Lobby",
+  "short_name": "Room Lobby",
+  "description": "Language-light party games for a shared screen.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#151a17",
+  "theme_color": "#b7d43d"
+}

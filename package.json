@@ -1,0 +1,26 @@
+{
+  "name": "living-room-lobby",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config frontend/vite.config.ts",
+    "dev:server": "cargo run",
+    "test": "vitest run --config frontend/vite.config.ts && cargo test",
+    "build": "vite build --config frontend/vite.config.ts",
+    "check": "tsc -p frontend/tsconfig.json --noEmit && cargo check"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@types/node": "^22.10.2",
+    "@types/qrcode": "^1.5.5",
+    "playwright": "^1.62.1",
+    "sharp": "^0.35.4",
+    "typescript": "^5.7.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}

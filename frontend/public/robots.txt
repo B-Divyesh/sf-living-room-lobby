@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://living-room-lobby.sociobot.in/sitemap.xml
