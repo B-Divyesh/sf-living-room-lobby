@@ -57,16 +57,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
-    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://data/lobby.db?mode=rwc".into());
+    let database_url =
+        env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://data/lobby.db?mode=rwc".into());
     if database_url.starts_with("sqlite://data/") {
         std::fs::create_dir_all("data")?;
     }
     let options: SqliteConnectOptions = database_url.parse()?;
-    let pool = SqlitePoolOptions::new().max_connections(8).connect_with(options).await?;
+    let pool = SqlitePoolOptions::new()
+        .max_connections(8)
+        .connect_with(options)
+        .await?;
     sqlx::migrate!().run(&pool).await?;
 
-    let state = AppState { pool };
-    let port: u16 = env::var("PORT").ok().and_then(|v| v.parse().ok()).unwrap_or(8080);
+    let state = AppState::new(pool);
+    let port: u16 = env::var("PORT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(8080);
     let address = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(address).await?;
     info!(%address, "living room lobby listening");
@@ -78,7 +85,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn shutdown_signal() {
-    let ctrl_c = async { tokio::signal::ctrl_c().await.expect("install Ctrl+C handler") };
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("install Ctrl+C handler")
+    };
     #[cfg(unix)]
     let terminate = async {
         tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
@@ -99,15 +110,25 @@ mod tests {
     use tower::ServiceExt;
 
     async fn test_app() -> Router {
-        let pool = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
         sqlx::migrate!().run(&pool).await.unwrap();
-        app(AppState { pool }, "dist")
+        app(AppState::new(pool), "dist")
     }
 
     #[tokio::test]
     async fn health_reports_build() {
-        let response = test_app().await
-            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+        let response = test_app()
+            .await
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
@@ -116,22 +137,76 @@ mod tests {
     #[tokio::test]
     async fn create_join_read_and_play_room_flow() {
         let service = test_app().await;
-        let created = service.clone().oneshot(Request::builder().method("POST").uri("/api/rooms").body(Body::empty()).unwrap()).await.unwrap();
+        let created = service
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/rooms")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(created.status(), StatusCode::OK);
-        let json: Value = serde_json::from_slice(&created.into_body().collect().await.unwrap().to_bytes()).unwrap();
+        let json: Value =
+            serde_json::from_slice(&created.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
         let code = json["code"].as_str().unwrap();
         let host = json["hostToken"].as_str().unwrap();
-        let join = service.clone().oneshot(Request::builder().method("POST").uri(format!("/api/rooms/{code}/join")).header("content-type", "application/json").body(Body::from(r#"{"name":"Family","mode":"shared"}"#)).unwrap()).await.unwrap();
+        let join = service
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/rooms/{code}/join"))
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"name":"Family","mode":"shared"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(join.status(), StatusCode::OK);
-        let joined: Value = serde_json::from_slice(&join.into_body().collect().await.unwrap().to_bytes()).unwrap();
+        let joined: Value =
+            serde_json::from_slice(&join.into_body().collect().await.unwrap().to_bytes()).unwrap();
         let player = joined["token"].as_str().unwrap();
         let host_body = json!({"token":host,"stage":"playing","game":"point","prompt":"READY","resetRound":true}).to_string();
-        let started = service.clone().oneshot(Request::builder().method("POST").uri(format!("/api/rooms/{code}/host")).header("content-type", "application/json").body(Body::from(host_body)).unwrap()).await.unwrap();
+        let started = service
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/rooms/{code}/host"))
+                    .header("content-type", "application/json")
+                    .body(Body::from(host_body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(started.status(), StatusCode::OK);
         let action_body = json!({"token":player,"kind":"point","x":20,"y":30}).to_string();
-        let action = service.clone().oneshot(Request::builder().method("POST").uri(format!("/api/rooms/{code}/action")).header("content-type", "application/json").body(Body::from(action_body)).unwrap()).await.unwrap();
+        let action = service
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/rooms/{code}/action"))
+                    .header("content-type", "application/json")
+                    .body(Body::from(action_body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(action.status(), StatusCode::OK);
-        let read = service.oneshot(Request::builder().uri(format!("/api/rooms/{code}")).body(Body::empty()).unwrap()).await.unwrap();
+        let read = service
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/rooms/{code}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(read.status(), StatusCode::OK);
     }
 }
