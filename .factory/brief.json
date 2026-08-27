@@ -1,0 +1,8 @@
+{
+  "slug": "living-room-lobby",
+  "title": "Living Room Lobby",
+  "artifact_class": "web-with-backend",
+  "audience": "Multi-generational families who need phone-optional, language-light party games on a smart-TV browser.",
+  "smallest_useful_product": ["co-op drawing", "point-at-the-TV tilt reaction", "pass-the-phone guessing"],
+  "monetization": "freemium one-time family pack"
+}

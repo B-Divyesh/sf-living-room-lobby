@@ -1,0 +1,7 @@
+{
+  "tool": "/opt/fleet/lib/gen-image.sh",
+  "deployment": "factory-image",
+  "date": "2026-08-27",
+  "use_case": "illustration-story",
+  "prompt": "Wide editorial hero illustration for a family party-game website. An inviting multigenerational living-room play-space with no identifiable people: a large glowing television set into a brutalist cast-concrete wall, three mismatched chairs and floor cushions facing it, one shared unbranded phone resting on a low table, abstract cut-paper arms pointing and drawing toward the screen, small playful pebble-like game tokens. Moss grows softly through concrete seams. Tactile screen-print collage, crisp block shapes, subtle paper grain, slightly axonometric depth, warm evening practical light, generous charcoal negative space around the TV. Palette: charcoal concrete, warm chalk, vivid moss green, clay orange, muted sky blue. Friendly, energetic, inclusive, sophisticated rather than childish. No text, no letters, no numbers, no logos, no watermark, no branded controllers, no photoreal faces, no gradients, no glossy app mockup."
+}
