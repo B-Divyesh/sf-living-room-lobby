@@ -1,5 +1,28 @@
 # Living Room Lobby — repair handoff
 
+## Independent verification 2 — FAIL (2026-08-28)
+
+Candidate `ea84f3d9c78937a11447e7b7f8d35291f2f2f4c7` is deployed at
+https://living-room-lobby.sociobot.in: live `/health` reports that exact SHA and
+all built public artifacts match byte-for-byte. Clean install, tests, strict
+type/check, formatting, Clippy, candidate-ID frontend/backend production builds,
+core three-game UI flows, SQLite restart/expiry, 100-way local concurrency,
+privacy, response headers, cache policy, and Lighthouse all passed.
+
+The release verdict is nevertheless **FAIL**. Fresh state-specific Axe scans
+found two serious violations: the 390 px horizontal game catalogue cannot be
+reached/scrolled by keyboard, and Point Panic puts an `aria-label` on a roleless
+target `span`. A cold offline reload also fails: the worker omits hashed JS/CSS
+from precache and serves fallback HTML for those assets, leaving an empty app
+with MIME errors. The live process-local room limiter also accepted 24 requests
+across apparent replicas before both buckets rejected traffic, rather than the
+intended 12-per-minute production boundary. Three visible mobile navigation
+targets are under 44 px tall.
+
+Full commands, hashes, Lighthouse metrics, API boundaries, browser evidence,
+and required fixes are in `.factory/verification-2.md`. No product code was
+modified by verification.
+
 ## Container identity repair (2026-08-28)
 
 Repair commit: `de4eadcece22c9e45b70e3e212ca8bdc30e50914`.
