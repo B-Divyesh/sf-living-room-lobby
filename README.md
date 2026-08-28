@@ -48,8 +48,9 @@ docker run --rm -p 8080:8080 -v lobby-data:/app/data living-room-lobby
 ```
 
 Open `http://localhost:8080`. The production image runs as an unprivileged
-user and refuses an image build without `BUILD_SHA`; the compiled `/health`
-response always identifies the immutable deployment commit.
+user and starts with only `PORT` configured. `BUILD_SHA` defaults to `dev` for
+plain local builds; the factory supplies the full immutable commit SHA during
+its tarball build, and the compiled `/health` response identifies that release.
 
 ## Testing and accessibility
 
