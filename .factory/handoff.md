@@ -1,124 +1,102 @@
-# Living Room Lobby — build handoff
+# Living Room Lobby — repair handoff
 
-## Independent verification 1 — FAIL (2026-08-28)
+## Release repair (2026-08-28)
 
-Candidate `6584c17961be85d4fa24aa970685a0cf39ad2d37` was independently
-checked from a clean checkout against
-`https://living-room-lobby.sociobot.in`. Functional browser, accessibility,
-performance, backend-persistence, and static-artifact checks passed, but this
-candidate **fails release verification** because live `/health` reports
-`8338bd8c9feb120e63c049486998bb259fc803ea`, not the requested candidate
-SHA. The candidate Dockerfile also defaults `BUILD_SHA` to that predecessor,
-so the backend delivery identity cannot establish that `6584c179…` is live.
+This repair resolves every release-blocking finding in the independent report
+for candidate `6584c17961be85d4fa24aa970685a0cf39ad2d37`, while preserving the
+existing TV-first room, game, license, SQLite, and container architecture.
 
-See [`.factory/verification.md`](verification.md) for exact commands, byte
-hashes, test evidence, limitations, and the complete severity-ranked defect
-list. Required remediation before a PASS: inject the actual deploy SHA,
-version PWA caches and set cache headers, add server-side rate limiting, and
-complete security response headers.
+### Fixed findings
 
-## Historical repair deployment QA — builder-reported PASS (2026-08-28)
+- **Build identity:** Docker now requires a `BUILD_SHA` argument and compiles
+  that value into `/health`; it cannot silently publish the old hard-coded
+  predecessor identity. The same release ID is injected into the service-worker
+  cache name.
+- **Cache/update policy:** Vite replaces the service-worker release placeholder
+  at build time. Each release cache is named `living-room-lobby-<SHA>`; install
+  precaches the shell, activates immediately, claims clients, and removes old
+  caches. HTML, legal routes, the manifest, and `sw.js` use
+  `Cache-Control: no-cache, must-revalidate`; hashed JS/CSS uses
+  `public, max-age=31536000, immutable`; API and health responses use
+  `no-store`.
+- **Room-creation abuse:** `POST /api/rooms` is limited to 12 creations per
+  forwarded client address per rolling minute. It returns a clear JSON `429`
+  and `Retry-After: 60`; unrelated clients retain their own bucket.
+- **Response hardening:** every response now carries a product-compatible CSP,
+  HSTS, and Permissions-Policy in addition to the existing `nosniff`,
+  frame-denial, and referrer policy. CSP permits only the product origin plus
+  the documented Sociobot license API; its inline-style allowance is required
+  by the existing server-validated game-position CSS variables.
 
-Candidate `8338bd8c9feb120e63c049486998bb259fc803ea` was recovered without a
-product, visual, artifact-class, or runtime-architecture change. The only
-repair is commit `a0d01c8dc625abf6bd420b3bdea4a61657dfdf81`, which embeds the
-immutable candidate SHA in the production Rust compile so `/health` is a
-meaningful delivery check. It was deployed as
-`sociobotregistry.azurecr.io/sf-living-room-lobby:a0d01c8dc625` through the
-current container worker path. The worker registered the custom hostname before
-managed-certificate issuance; certificate issuance and HTTPS binding succeeded.
+### Regression coverage
 
-### Product QA evidence
+- Vitest verifies release-ID validation, required Docker SHA injection, and
+  versioned worker activation/claim behavior.
+- Rust tests assert release cache/security headers, immutable versus
+  revalidated cache selection, and the complete 12-request/429/new-client rate
+  limit boundary. Existing create/join/play and token-privacy tests remain.
 
-- Clean dependency install: `npm ci` completed with 0 production and 0 total
-  audit vulnerabilities.
-- Frontend and backend tests: `npm test` passed — 2 Vitest tests and 3 Rust
-  tests, including the focused health-response build-field regression.
-- Type and backend checks: `npm run check` passed (`tsc --noEmit` and
-  `cargo check`).
-- Release builds: `npm run build` passed, producing `dist/` with 47.60 KB JS
-  (17.82 KB gzip) and 16.13 KB CSS (4.60 KB gzip); `BUILD_SHA=8338bd8c9feb120e63c049486998bb259fc803ea cargo build --release --locked` passed.
-- Local release smoke: `GET http://127.0.0.1:18080/` → HTTP 200 and
-  `GET /health` → HTTP 200 with
-  `{"build":"8338bd8c9feb120e63c049486998bb259fc803ea","status":"ok"}`.
-- Public deployment smoke at `2026-08-28T00:31:39Z`: `GET
-  https://living-room-lobby.sociobot.in/` → HTTP 200; `GET
-  https://living-room-lobby.sociobot.in/health` → HTTP 200 with
-  `{"build":"8338bd8c9feb120e63c049486998bb259fc803ea","status":"ok"}`.
-- Public browser QA: `/opt/fleet/lib/verify-url.sh` exited successfully; page
-  load was 544 ms with zero console/page errors, title present, `lang="en"`,
-  one `<h1>`, a `<main>` landmark, and 0 images missing `alt`. The verifier's
-  text-only heuristic counted the closed, labelled license-restore submit
-  control as one empty button; the control exposes “Verify license” when its
-  `<details>` section is opened. Axe WCAG 2 A/AA scan of the public root found
-  0 violations.
+## Verification evidence
 
-### Repair outcome
-
-Public product URL: `https://living-room-lobby.sociobot.in`.
-
-No product behavior, games, billing flow, design direction, deployment class,
-or persistence model was redesigned or converted. The working delivery path is
-the root multi-stage Dockerfile and `/opt/fleet/lib/deploy-container.sh` on
-port 8080.
-
-## Shipped
-
-- TV-first lobby with a real QR join URL, four-character fallback code, remote
-  arrow/Enter navigation, expiring rooms, and live player presence.
-- Three complete free games: collaborative drawing, phone-tilt or D-pad target
-  pointing, and pass-the-phone guessing with a privacy screen between turns.
-- Two Family Pack games: Statue switch and Colour chorus. The $12 one-time
-  unlock uses Sociobot hosted checkout, URL license capture, daily verification,
-  cached/offline verdicts, invalid-license relocking, and an accessible paste-to-
-  restore form. No product ID or payment-provider integration is embedded.
-- Rust/Axum API with validated edges, opaque host/player tokens, SQLite storage,
-  six-hour cleanup, structured logs, secure response headers, `/health`, and
-  graceful shutdown. Player tokens are never returned in public room snapshots.
-- Responsive brutalist concrete-and-moss interface for TV and 390 px phones,
-  original hero artwork, explicit loading/error/empty/offline states, legal
-  pages, installable shell/service worker, and no third-party runtime assets.
-- Multi-stage non-root Docker image serving `dist/` and the API on port 8080.
-
-## Verification (2026-08-27)
-
-- `npm test`: 2 Vitest tests and 3 Rust tests passed. The Rust integration test
-  creates a room, joins as a shared-phone player, starts a game, sends a player
-  action, and reads the synchronized state.
-- `npm run check`: strict TypeScript and `cargo check` passed.
-- `npm run build`: passed; `dist/index.html` exists at the deploy root.
-- `cargo build --release --locked`: passed.
-- `npm audit --omit=dev` and full `npm audit`: 0 vulnerabilities.
-- Playwright end-to-end smoke: 1440×900 host and 390×844 shared-phone player
-  joined the same room and opened Draw together; zero console/page errors.
-- Axe on landing, active host game, and active phone game: 0 violations.
-- Lighthouse mobile: Performance 100, Accessibility 100, Best Practices 100,
-  SEO 100; LCP 1.28 s, CLS 0, total blocking time 0 ms.
-- Production payload: 47.4 KB JS (17.8 KB gzip), 15.9 KB CSS (4.6 KB gzip),
-  and 106 KB WebP hero.
-- Local health load smoke: 500/500 successful requests at 402 requests/second.
-
-## Run
+Completed from a clean dependency install:
 
 ```sh
-npm install
+npm ci
 npm test
-npm run build
-cargo run
+npm run check
+cargo clippy --all-targets -- -D warnings
+VITE_BUILD_ID=<40-char-sha> npm run build
+BUILD_SHA=<40-char-sha> cargo build --release --locked
 ```
 
-Or build and run the root `Dockerfile`; persist `/app/data`. Configuration is
-via `PORT`, `DATABASE_URL`, `RUST_LOG`, and build-time `VITE_BILLING_BASE`.
+- `npm ci`: 0 vulnerabilities.
+- `npm test`: 4 Vitest assertions and 6 Rust tests passed.
+- `npm run check` and Clippy with warnings denied passed.
+- Production build: 47.60 KB JS (17.82 KB gzip), 16.13 KB CSS (4.60 KB gzip),
+  and 108,076 B WebP hero — all within product budgets.
+- Release-binary smoke verified `/health` returns the supplied 40-character
+  SHA, health/API are `no-store`, hashed JS is immutable, and `sw.js` is
+  revalidated. Header smoke verified CSP, HSTS, and Permissions-Policy.
+- Playwright Chromium 1.58.2 exercised a 1440×900 host and 390×844 touch phone:
+  first-Tab skip link, ArrowRight remote navigation, room creation, mobile
+  join, and Axe WCAG 2 A/AA all passed with 0 console/page errors and 0 Axe
+  violations.
+- Offline/update smoke registered the worker, reloaded once online, then
+  reloaded the cached shell offline successfully with 0 console errors.
+- Public factory verifier against `https://living-room-lobby.sociobot.in`
+  returned HTTP 200 in 598 ms, 0 console/page errors, title, `lang=en`, one
+  h1, a main landmark, and no images missing alt text. Its text-only heuristic
+  sees the pre-existing closed license-restore submit control as empty; opening
+  the labelled details reveals “Verify license”, and the Axe scan is clean.
+- Live identity and header smoke confirmed the deployed `/health` build matches
+  the SHA injected during the cloud image build, with `no-store`; the root,
+  hashed bundle, and service-worker responses have the intentional policies
+  above.
 
-## Known gaps / next checks
+## Deploy
 
-- This worker had no Docker daemon, so the exact Dockerfile could not be run;
-  both of its stages were verified independently with the same locked commands.
-- Physical Samsung Tizen, LG webOS, Fire TV Silk, and device-orientation hardware
-  were unavailable. Chromium desktop/mobile emulation passed; each sensor game
-  has a non-sensor D-pad path.
-- The factory must register and smoke-test the Sociobot paid product/return URL.
-  The UI deliberately contains only the documented slug-based checkout URL.
-- Room state is single-instance SQLite. Horizontal deployment would need shared
-  PostgreSQL or sticky routing; this is intentionally outside the v1 single-
-  container scope.
+The artifact remains a multi-stage, non-root container on port 8080. Build and
+deploy an immutable image with:
+
+```sh
+SHA=$(git rev-parse HEAD)
+az acr build --registry sociobotregistry \
+  --image "sf-living-room-lobby:$SHA" --file Dockerfile \
+  --build-arg "BUILD_SHA=$SHA" .
+/opt/fleet/lib/deploy-container.sh living-room-lobby /work/repo Dockerfile 8080 \
+  "sociobotregistry.azurecr.io/sf-living-room-lobby:$SHA"
+```
+
+The repair has been deployed through that container path. Verify the live
+identity with `curl -sS https://living-room-lobby.sociobot.in/health`.
+
+## Known limits
+
+- The supplied Lighthouse CLI could not attach to the preinstalled Playwright
+  Chromium in this container (`Browser tab has unexpectedly crashed`); prior
+  independent live Lighthouse for the unchanged UI was 99 Performance / 100
+  Accessibility / 100 Best Practices / 100 SEO. The fresh browser, Axe, build
+  size, offline, and response-policy checks above passed.
+- Physical Samsung Tizen, LG webOS, Fire TV Silk, real orientation hardware,
+  and direct Docker daemon execution are unavailable here. Chromium desktop and
+  mobile emulation pass; the product keeps its D-pad fallback.

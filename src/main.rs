@@ -3,7 +3,11 @@ mod rooms;
 use std::{env, net::SocketAddr, path::Path};
 
 use axum::{
-    http::{header, HeaderValue, StatusCode},
+    body::Body,
+    extract::Request,
+    http::{header, HeaderName, HeaderValue, StatusCode},
+    middleware::{self, Next},
+    response::Response,
     routing::get,
     Json, Router,
 };
@@ -37,7 +41,65 @@ fn app(state: AppState, static_dir: &str) -> Router {
             header::REFERRER_POLICY,
             HeaderValue::from_static("strict-origin-when-cross-origin"),
         ))
+        .layer(middleware::from_fn(response_policy))
         .layer(TraceLayer::new_for_http())
+}
+
+/// Apply the same response policy to the API and the TV shell.  The shell is
+/// deliberately revalidated so a room never remains on an older release,
+/// while Vite's content-addressed bundles can be kept indefinitely.
+async fn response_policy(request: Request, next: Next) -> Response<Body> {
+    let path = request.uri().path().to_owned();
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+
+    headers.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static(
+            "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://api.sociobot.in https://pilot-api.sociobot.in; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.sociobot.in https://pilot-api.sociobot.in; worker-src 'self'; manifest-src 'self'",
+        ),
+    );
+    headers.insert(
+        header::STRICT_TRANSPORT_SECURITY,
+        HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+    );
+    headers.insert(
+        HeaderName::from_static("permissions-policy"),
+        HeaderValue::from_static(
+            "accelerometer=(self), camera=(), geolocation=(), gyroscope=(self), microphone=(), payment=(), usb=()",
+        ),
+    );
+    headers.insert(header::CACHE_CONTROL, cache_control_for_path(&path));
+    response
+}
+
+fn cache_control_for_path(path: &str) -> HeaderValue {
+    let value = if path.starts_with("/api/") || path == "/health" {
+        "no-store"
+    } else if path == "/sw.js" || path == "/manifest.webmanifest" || !path.starts_with("/assets/") {
+        "no-cache, must-revalidate"
+    } else if is_hashed_asset(path) {
+        "public, max-age=31536000, immutable"
+    } else {
+        "public, max-age=3600, must-revalidate"
+    };
+    HeaderValue::from_static(value)
+}
+
+fn is_hashed_asset(path: &str) -> bool {
+    let Some(name) = path.rsplit('/').next() else {
+        return false;
+    };
+    let Some((stem, _extension)) = name.rsplit_once('.') else {
+        return false;
+    };
+    let Some((_, fingerprint)) = stem.rsplit_once('-') else {
+        return false;
+    };
+    fingerprint.len() >= 8
+        && fingerprint
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
 }
 
 async fn health() -> (StatusCode, Json<Value>) {
@@ -105,7 +167,7 @@ async fn shutdown_signal() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{body::Body, http::Request};
+    use axum::http::Request;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
@@ -136,6 +198,47 @@ mod tests {
         let health: Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(health["status"], "ok");
         assert!(health["build"].as_str().is_some());
+    }
+
+    #[tokio::test]
+    async fn health_has_release_security_and_cache_policy() {
+        let response = test_app()
+            .await
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let headers = response.headers();
+        assert_eq!(headers[header::CACHE_CONTROL], "no-store");
+        assert!(headers[header::CONTENT_SECURITY_POLICY]
+            .to_str()
+            .unwrap()
+            .contains("frame-ancestors 'none'"));
+        assert_eq!(
+            headers[header::STRICT_TRANSPORT_SECURITY],
+            "max-age=31536000; includeSubDomains"
+        );
+        assert!(headers.contains_key("permissions-policy"));
+    }
+
+    #[test]
+    fn cache_policy_keeps_hashed_assets_immutable_and_shell_revalidated() {
+        assert_eq!(
+            cache_control_for_path("/assets/index-D9xQORDg.js"),
+            "public, max-age=31536000, immutable"
+        );
+        assert_eq!(
+            cache_control_for_path("/sw.js"),
+            "no-cache, must-revalidate"
+        );
+        assert_eq!(
+            cache_control_for_path("/privacy"),
+            "no-cache, must-revalidate"
+        );
     }
 
     #[tokio::test]

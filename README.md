@@ -43,13 +43,13 @@ The server defaults to `sqlite://data/lobby.db?mode=rwc`. Override with
 ## Container
 
 ```sh
-docker build -t living-room-lobby .
+docker build --build-arg BUILD_SHA="$(git rev-parse HEAD)" -t living-room-lobby .
 docker run --rm -p 8080:8080 -v lobby-data:/app/data living-room-lobby
 ```
 
 Open `http://localhost:8080`. The production image runs as an unprivileged
-user and exposes `/health` with the build SHA when `BUILD_SHA` was present at
-Rust compile time.
+user and refuses an image build without `BUILD_SHA`; the compiled `/health`
+response always identifies the immutable deployment commit.
 
 ## Testing and accessibility
 

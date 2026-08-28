@@ -1,8 +1,12 @@
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{header, HeaderMap, StatusCode},
     routing::{get, post},
     Json, Router,
 };
@@ -16,6 +20,16 @@ use tokio::sync::Mutex;
 pub struct AppState {
     pub pool: SqlitePool,
     write_lock: Arc<Mutex<()>>,
+    room_creation_limiter: Arc<Mutex<HashMap<String, RateWindow>>>,
+}
+
+const ROOM_CREATION_LIMIT: u32 = 12;
+const ROOM_CREATION_WINDOW: Duration = Duration::from_secs(60);
+
+#[derive(Clone, Copy)]
+struct RateWindow {
+    started: Instant,
+    requests: u32,
 }
 
 impl AppState {
@@ -23,7 +37,23 @@ impl AppState {
         Self {
             pool,
             write_lock: Arc::new(Mutex::new(())),
+            room_creation_limiter: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    async fn allow_room_creation(&self, client: &str) -> bool {
+        let now = Instant::now();
+        let mut clients = self.room_creation_limiter.lock().await;
+        clients.retain(|_, window| now.duration_since(window.started) < ROOM_CREATION_WINDOW);
+        let window = clients.entry(client.to_owned()).or_insert(RateWindow {
+            started: now,
+            requests: 0,
+        });
+        if window.requests >= ROOM_CREATION_LIMIT {
+            return false;
+        }
+        window.requests += 1;
+        true
     }
 }
 
@@ -159,7 +189,13 @@ pub fn router() -> Router<AppState> {
         .route("/:code/action", post(player_action))
 }
 
-async fn create_room(State(state): State<AppState>) -> Result<Json<Value>, ApiError> {
+async fn create_room(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    if !state.allow_room_creation(&client_key(&headers)).await {
+        return Err(ApiError::too_many());
+    }
     cleanup(&state.pool).await;
     for _ in 0..8 {
         let code = random_code();
@@ -193,6 +229,19 @@ async fn create_room(State(state): State<AppState>) -> Result<Json<Value>, ApiEr
         }
     }
     Err(ApiError::internal("Could not make a room. Try again."))
+}
+
+/// Azure Container Apps forwards the original client address in
+/// X-Forwarded-For. Direct local traffic intentionally shares a small bucket.
+fn client_key(headers: &HeaderMap) -> String {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(',').next())
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && value.len() <= 64)
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| "direct-unknown".to_owned())
 }
 
 async fn get_room(
@@ -406,6 +455,12 @@ impl ApiError {
             message: message.into(),
         }
     }
+    fn too_many() -> Self {
+        Self {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            message: "Too many new rooms from this connection. Try again in a minute.".into(),
+        }
+    }
 }
 impl From<sqlx::Error> for ApiError {
     fn from(_: sqlx::Error) -> Self {
@@ -414,13 +469,23 @@ impl From<sqlx::Error> for ApiError {
 }
 impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
-        (self.status, Json(json!({ "error": self.message }))).into_response()
+        let is_rate_limited = self.status == StatusCode::TOO_MANY_REQUESTS;
+        let mut response = (self.status, Json(json!({ "error": self.message }))).into_response();
+        if is_rate_limited {
+            response
+                .headers_mut()
+                .insert(header::RETRY_AFTER, header::HeaderValue::from_static("60"));
+        }
+        response
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{body::Body, http::Request};
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
     #[test]
     fn public_room_never_serializes_player_tokens() {
         let room = InternalRoom {
@@ -447,5 +512,58 @@ mod tests {
         };
         let value = serde_json::to_string(&room.public()).unwrap();
         assert!(!value.contains("secret"));
+    }
+
+    #[tokio::test]
+    async fn room_creation_is_limited_per_forwarded_connection() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        let service = router().with_state(AppState::new(pool));
+        for _ in 0..ROOM_CREATION_LIMIT {
+            let response = service
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/")
+                        .header("x-forwarded-for", "203.0.113.42")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+        }
+        let limited = service
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/")
+                    .header("x-forwarded-for", "203.0.113.42")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(limited.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(limited.headers()[header::RETRY_AFTER], "60");
+        let body = limited.into_body().collect().await.unwrap().to_bytes();
+        assert!(std::str::from_utf8(&body)
+            .unwrap()
+            .contains("Too many new rooms"));
+
+        let next_connection = service
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/")
+                    .header("x-forwarded-for", "198.51.100.10")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(next_connection.status(), StatusCode::OK);
     }
 }
