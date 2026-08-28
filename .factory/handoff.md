@@ -1,5 +1,50 @@
 # Living Room Lobby — build handoff
 
+## Repair deployment QA — PASS (2026-08-28)
+
+Candidate `8338bd8c9feb120e63c049486998bb259fc803ea` was recovered without a
+product, visual, artifact-class, or runtime-architecture change. The only
+repair is commit `a0d01c8dc625abf6bd420b3bdea4a61657dfdf81`, which embeds the
+immutable candidate SHA in the production Rust compile so `/health` is a
+meaningful delivery check. It was deployed as
+`sociobotregistry.azurecr.io/sf-living-room-lobby:a0d01c8dc625` through the
+current container worker path. The worker registered the custom hostname before
+managed-certificate issuance; certificate issuance and HTTPS binding succeeded.
+
+### Product QA evidence
+
+- Clean dependency install: `npm ci` completed with 0 production and 0 total
+  audit vulnerabilities.
+- Frontend and backend tests: `npm test` passed — 2 Vitest tests and 3 Rust
+  tests, including the focused health-response build-field regression.
+- Type and backend checks: `npm run check` passed (`tsc --noEmit` and
+  `cargo check`).
+- Release builds: `npm run build` passed, producing `dist/` with 47.60 KB JS
+  (17.82 KB gzip) and 16.13 KB CSS (4.60 KB gzip); `BUILD_SHA=8338bd8c9feb120e63c049486998bb259fc803ea cargo build --release --locked` passed.
+- Local release smoke: `GET http://127.0.0.1:18080/` → HTTP 200 and
+  `GET /health` → HTTP 200 with
+  `{"build":"8338bd8c9feb120e63c049486998bb259fc803ea","status":"ok"}`.
+- Public deployment smoke at `2026-08-28T00:31:39Z`: `GET
+  https://living-room-lobby.sociobot.in/` → HTTP 200; `GET
+  https://living-room-lobby.sociobot.in/health` → HTTP 200 with
+  `{"build":"8338bd8c9feb120e63c049486998bb259fc803ea","status":"ok"}`.
+- Public browser QA: `/opt/fleet/lib/verify-url.sh` exited successfully; page
+  load was 544 ms with zero console/page errors, title present, `lang="en"`,
+  one `<h1>`, a `<main>` landmark, and 0 images missing `alt`. The verifier's
+  text-only heuristic counted the closed, labelled license-restore submit
+  control as one empty button; the control exposes “Verify license” when its
+  `<details>` section is opened. Axe WCAG 2 A/AA scan of the public root found
+  0 violations.
+
+### Repair outcome
+
+Public product URL: `https://living-room-lobby.sociobot.in`.
+
+No product behavior, games, billing flow, design direction, deployment class,
+or persistence model was redesigned or converted. The working delivery path is
+the root multi-stage Dockerfile and `/opt/fleet/lib/deploy-container.sh` on
+port 8080.
+
 ## Shipped
 
 - TV-first lobby with a real QR join URL, four-character fallback code, remote
