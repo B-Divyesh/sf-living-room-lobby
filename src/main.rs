@@ -132,6 +132,10 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let health: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(health["status"], "ok");
+        assert!(health["build"].as_str().is_some());
     }
 
     #[tokio::test]

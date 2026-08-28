@@ -7,10 +7,13 @@ RUN npm run build
 
 FROM rust:1.90-bookworm AS backend
 WORKDIR /app
+ARG BUILD_SHA=8338bd8c9feb120e63c049486998bb259fc803ea
 COPY Cargo.toml Cargo.lock ./
 COPY migrations ./migrations
 COPY src ./src
-RUN cargo build --release --locked
+# Compile the immutable candidate identity into /health. Deployments may
+# override BUILD_SHA when producing an explicitly repaired candidate.
+RUN BUILD_SHA="$BUILD_SHA" cargo build --release --locked
 
 FROM debian:bookworm-slim AS runtime
 RUN groupadd --system lobby && useradd --system --gid lobby --home-dir /app lobby \
