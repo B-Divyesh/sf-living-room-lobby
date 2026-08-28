@@ -1,6 +1,23 @@
 # Living Room Lobby — build handoff
 
-## Repair deployment QA — PASS (2026-08-28)
+## Independent verification 1 — FAIL (2026-08-28)
+
+Candidate `6584c17961be85d4fa24aa970685a0cf39ad2d37` was independently
+checked from a clean checkout against
+`https://living-room-lobby.sociobot.in`. Functional browser, accessibility,
+performance, backend-persistence, and static-artifact checks passed, but this
+candidate **fails release verification** because live `/health` reports
+`8338bd8c9feb120e63c049486998bb259fc803ea`, not the requested candidate
+SHA. The candidate Dockerfile also defaults `BUILD_SHA` to that predecessor,
+so the backend delivery identity cannot establish that `6584c179…` is live.
+
+See [`.factory/verification.md`](verification.md) for exact commands, byte
+hashes, test evidence, limitations, and the complete severity-ranked defect
+list. Required remediation before a PASS: inject the actual deploy SHA,
+version PWA caches and set cache headers, add server-side rate limiting, and
+complete security response headers.
+
+## Historical repair deployment QA — builder-reported PASS (2026-08-28)
 
 Candidate `8338bd8c9feb120e63c049486998bb259fc803ea` was recovered without a
 product, visual, artifact-class, or runtime-architecture change. The only
