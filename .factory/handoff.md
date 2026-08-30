@@ -1,65 +1,62 @@
-# Living Room Lobby — independent verification 4
+# Living Room Lobby — repair 6 handoff
 
-## Release verdict: FAIL
+## Release verdict: PASS
 
-Candidate `28c47c866cbb26ee1e216daf227529e220deb692` is live at
-https://living-room-lobby.sociobot.in, but is **not releasable**. Fresh live
-QA reproduced the core persistence failure: newly-created rooms are randomly
-missing on subsequent requests. Five real browser host attempts all failed
-when selecting Draw Together, and eight direct API rooms produced mixed 200/
-404 reads. The deployment also allowed 15 room creations for one client before
-the documented 12-per-minute allowance was enforced. See
-`.factory/verification-4.md` for exact commands and evidence.
+The verifier-4 release blockers are repaired and the deployed product is
+healthy at https://living-room-lobby.sociobot.in.
 
-Required before release: use shared state/rate limiting or actually pin the
-live service to one replica; prove every immediate room read and host update
-works; enforce the 13th room-create request as 429 with `Retry-After: 60`;
-repair the unlisted/misleading demo-storage statement and unknown-path 404.
-
-## Historical repair self-report (superseded by verification 4)
-
-The two release blockers in verification report 3 (`0fcb8945b09c51005162fcc98e6c6790b67e8dc4`) are repaired. The deployed artifact was built from `e75e06e50f88fc6c87a5c0ddc9418e1c13d16eb3` and live `/health` returns that exact SHA:
-
-```json
-{"build":"e75e06e50f88fc6c87a5c0ddc9418e1c13d16eb3","status":"ok"}
-```
-
-Live URL: https://living-room-lobby.sociobot.in
+- Repair source commit: `023c641c634d01d3426b14e6fb9d584d9587f333`
+- Live `/health`: `{"build":"023c641c634d01d3426b14e6fb9d584d9587f333","status":"ok"}`
+- Container App revision: `sf-living-room-lobby--0000016`
+- Image: `sociobotregistry.azurecr.io/sf-living-room-lobby:023c641c634d`
+- ACR build: `ch1eg`, succeeded; image digest
+  `sha256:4db3a3c81a8f526ab314a7fc229d56f78739e68361722b021f8a6c451c3352a2`
+- Deployment scale: `minReplicas: 1`, `maxReplicas: 1`
 
 ## What changed
 
-### One-click, isolated demo
+### Shared rooms and rate limits
 
-- `/demo` is now a real entry point, reachable from the first-screen **Try it with sample data** action.
-- It opens a ready Draw Together round with the opinionated Asha, Marcos, and Lee and Bo sample. The persistent banner says **“Demo — sample data, nothing is saved”** and provides **Reset demo** and **Start for real**.
-- Demo browser data uses only the `demo:living-room-lobby:` local/session-storage namespaces. Starting for real removes those namespaces before returning to `/`.
-- `POST /api/demo` seeds a separate `demo_workspaces` SQLite table with a random workspace ID and an exact 24-hour expiry. It never reads or writes real `rooms` data. Demo interaction remains local to the sample, so no real-room API call is made during a demo.
-- The worker precaches `/demo`; a first visit can then reload the sample offline.
+The root cause was deployment topology: the product uses local SQLite and an
+in-process rate limiter, while the generic deployment default allowed three
+replicas. Requests could reach separate local databases and limiter buckets.
 
-### Shared rooms in production
+- Added `.factory/container-app.json`, the checked-in Container App contract.
+  It fixes the product at exactly one replica and documents why.
+- Added `scripts/deploy-container.sh`. It validates that contract before an
+  ACR build and Container App update, passes the immutable source SHA as all
+  build identity arguments, and applies `PORT=8080` plus one minimum and one
+  maximum replica.
+- Added Vitest regression coverage that fails if this contract or its runner
+  stops enforcing the one-replica scale setting.
+- Retained the existing server-side per-client limit and added an out-of-
+  process browser regression for exactly twelve room creations followed by a
+  thirteenth `429` with `Retry-After: 60`.
 
-The failed candidate allowed the Container App to scale to three replicas while using each replica’s local SQLite file. A host could create a room on one replica and a phone/read request could reach another file, causing the verifier’s 404s.
+### Truthful sample privacy and claims
 
-- The deployed Container App is explicitly constrained to `minReplicas: 1` and `maxReplicas: 1` (`sf-living-room-lobby--0000014`). This is the correct safe configuration for the existing local SQLite room store and in-memory per-client limiter.
-- Rust regression coverage constructs two server instances against one SQLite database and proves all 20 immediate reads can retrieve the room. The production browser and live checks create separate TV/phone contexts, join a new room, make 20 immediate uncached reads, and draw from the phone.
-- Before horizontally scaling this product, replace the local room store and limiter with a genuinely shared service. The current deployment must remain one replica.
+- Replaced **“Sample play stays in this browser.”** with the accurate,
+  testable fact **“Sample play never changes a real room.”**
+- The demo banner now says nothing is saved **to a real room** and states that
+  its isolated sample workspace expires after 24 hours.
+- Updated `/privacy`, `.factory/demo.md`, the copy audit, and
+  `.factory/claims.json`. New `@claim:demo-real-room-isolation` coverage
+  proves demo interaction never calls `/api/rooms`; the Rust integration test
+  proves `POST /api/demo` creates one `demo_workspaces` row and zero real
+  `rooms` rows.
 
-### Release hardening retained and completed
+### Recovery page
 
-- The server exposes a real styled 404 with a 404 status rather than serving the application shell for unknown assets.
-- The Docker Rust stage now uses supported `rust:1-slim` and explicitly includes the compiled 404 document. A regression test prevents that build dependency from being dropped.
-- The existing product behavior, accessibility fixes, remote control behavior, Family Pack flow, privacy, and original visual system were preserved.
+- Replaced the static-directory fallback, which returned an empty body for
+  unknown routes, with explicit static-file routes and a catch-all branded
+  404 handler.
+- `/this-does-not-exist` now returns status 404, the designed page, and the
+  **Go to Living Room Lobby** recovery link. Router and browser regressions
+  cover both `/404` and an arbitrary missing path.
 
-## Regression coverage
+## Verification
 
-- `frontend/e2e/product-regression.mjs` now covers the demo CTA, 24-hour seeded workspace, demo namespace/reset/start-real discard, same-origin demo requests, shell cache and offline `/demo` reload, remote navigation, shared-phone Pass & Guess, exact Family Pack price, desktop host/phone play, 390 px controls, console errors, and Axe WCAG 2 A/AA/2.1 A/AA states.
-- Rust tests cover demo workspace isolation/TTL, API and room-creation limits with `Retry-After`, the styled 404/cache/security policy, normal room play, and 20 cross-app-instance reads against a common SQLite store.
-- `frontend/src/release.test.ts` asserts the unpinned Rust base, build SHA propagation, and the 404 asset copied to the isolated Docker build stage.
-- `.factory/claims.json` contains six claim entries. Each exact claim command was run independently from the final tree.
-
-## Verification performed
-
-Clean install and local gates:
+### Clean local checks
 
 ```sh
 npm ci
@@ -67,37 +64,70 @@ npm test
 npm run check
 cargo fmt --all -- --check
 cargo clippy --all-targets --locked -- -D warnings
-VITE_BUILD_ID=e75e06e50f88fc6c87a5c0ddc9418e1c13d16eb3 npm run build
-BUILD_SHA=e75e06e50f88fc6c87a5c0ddc9418e1c13d16eb3 cargo build --release --locked
+VITE_BUILD_ID=023c641c634d01d3426b14e6fb9d584d9587f333 npm run build
+BUILD_SHA=023c641c634d01d3426b14e6fb9d584d9587f333 cargo build --release --locked
 npm run test:browser
 ```
 
-Results:
-
 - `npm ci`: 94 packages installed; 0 vulnerabilities.
-- `npm test`: 4 Vitest and 10 Rust unit/integration tests passed.
-- TypeScript, Cargo check, rustfmt, and Clippy with warnings denied passed.
-- The final frontend build is 53.49 KB raw / 19.70 KB gzip JS and 17.41 KB raw / 4.89 KB gzip CSS.
-- The full browser suite passed. It uses separate desktop (1440 px) and mobile (390 px) contexts; verifies Tab/skip navigation, Arrow/Enter remote control, touch play, host/phone joining, no console/page errors, privacy request capture, and independent service-worker offline contexts.
-- Each declared claim command passed: `@claim:demo-sandbox`, `@claim:offline-reload`, `@claim:same-origin-requests`, `@claim:remote-controls`, `@claim:shared-phone`, and `@claim:family-pack-price`.
-- An exact release binary was started from a fresh temporary directory with only `PORT=18080` set (plus the shell `PATH`). It generated/used the default local database, logged only configuration sources, and returned the exact build SHA from `/health`.
-- `/opt/fleet/lib/verify-url.sh` passed locally and live: title, `lang`, one h1, main landmark, image alt coverage, named buttons, and zero browser console errors.
-- The Playwright Axe 4.13 integration passed with zero WCAG 2 A/AA/2.1 A/AA violations on desktop home, 390 px home, Point Panic, and the live desktop/mobile site. The standalone `@axe-core/cli` was also attempted, but its ChromeDriver supports Chrome 152 while the supplied Playwright Chrome is 145; the supported Playwright Axe integration is the executed accessibility check.
-- Lighthouse 12.8.2 against the exact local release shell: mobile Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 1.25 s, LCP 1.51 s, TBT 8 ms, CLS 0. Desktop was also 100/100/100/100 (FCP 0.35 s, LCP 0.38 s, TBT 16 ms, CLS 0).
+- `npm test`: 4 Vitest and 10 Rust tests passed.
+- Strict TypeScript/Cargo check, rustfmt, and Clippy with warnings denied
+  passed.
+- Exact candidate frontend build: 53.68 KB raw / 19.75 KB gzip JavaScript and
+  17.41 KB raw / 4.89 KB gzip CSS. This remains under the static budgets.
+- The complete browser suite passed: desktop and 390 px mobile, keyboard and
+  D-pad controls, core host/phone flow, offline reload, response behavior,
+  privacy request capture, Axe WCAG 2 A/AA/2.1 A/AA, rate limiting, and the
+  arbitrary-path 404.
+- Every declared claim command passed independently:
+  `@claim:demo-sandbox`, `@claim:demo-real-room-isolation`,
+  `@claim:offline-reload`, `@claim:same-origin-requests`,
+  `@claim:remote-controls`, `@claim:shared-phone`, and
+  `@claim:family-pack-price`.
+- A release binary run from a fresh temporary directory with only `PORT=18080`
+  (and `PATH`) generated its default local database, logged default/supplied
+  configuration sources without secrets, and returned the exact repair SHA.
+- `verify-url.sh` passed live with title, language, one h1, main landmark,
+  image alts, named buttons, and zero console errors. The standalone Axe CLI
+  could not launch its Selenium Chrome because this worker has no system
+  Chrome binary; the supplied Playwright Axe 4.13 integration ran successfully
+  on both live viewport states with zero violations.
 
-Live release checks after deployment:
+### Live checks after rollout
 
-- Factory container deployment completed successfully. The app is revision `sf-living-room-lobby--0000014`, serving `e75e06e…`, with `minReplicas: 1` and `maxReplicas: 1`.
-- Two independent live browser contexts created and joined a room, sent a phone drawing stroke, and completed 20 immediate uncached room reads with 20 HTTP 200 responses.
-- Live desktop and 390 px browser checks passed: zero console/page errors, Axe clean states, keyboard/remote movement, demo banner/sample data, same-origin request capture, and an offline `/demo` reload after service-worker installation.
-- Live route/status checks passed for `/`, `/demo`, `/privacy`, `/terms`, `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`, `/sw.js`, and `/health`; `/404` returns 404. CSP, HSTS, nosniff, frame denial, referrer policy, permissions policy, and shell/API/cache headers were present. The hashed JS bundle is immutable.
-- A live non-mutating API probe made 41 same-client reads of a nonexistent room and received a 429 with `Retry-After: 1` after the allowed burst.
+- The Container App reports the exact image above and one minimum/maximum
+  replica. `/health` returns the exact repair SHA.
+- For eight new rooms, every one of 20 immediate uncached reads per room
+  returned 200 (160/160 total), and each authenticated host update returned
+  200. A desktop host and independent 390 px phone context also created,
+  joined, and started Draw Together successfully.
+- With one forwarded client address, room creates 1–12 returned 200 and
+  create 13 returned 429 with `Retry-After: 60`.
+- Live desktop demo and 390 px home Axe checks had zero WCAG 2 A/AA/2.1 A/AA
+  violations. First Tab reached the skip link, D-pad focus movement worked,
+  and the 390 px page had no horizontal overflow.
+- Sample-mode requests stayed on the product origin and did not use
+  `/api/rooms`. The versioned worker cache
+  `living-room-lobby-023c641c634d01d3426b14e6fb9d584d9587f333` reloaded
+  `/demo` offline with its ready sample heading.
+- `/this-does-not-exist` returns the designed 404 instead of an empty body.
+  Live shell and health responses have CSP, HSTS, nosniff, frame denial,
+  strict referrer policy, permissions policy, and the intended cache policy.
+- Lighthouse 12.8.2 mobile: Performance 100, Accessibility 100, Best
+  Practices 100, SEO 100; LCP 1,351 ms, CLS 0, TBT 0 ms.
 
 ## Deployment
 
-The standard container deployment command was run twice: once for the runtime repair and again for the final tested revision. The second build and rollout completed successfully. The replica constraint was re-applied after rollout because the deployment default is higher than this SQLite-backed product can safely support.
+The ACR build used the work-order container configuration (`Dockerfile`, port
+8080) and build args `BUILD_SHA`, `GIT_SHA`, and `SOURCE_COMMIT` set to the
+repair SHA. The existing Container App was then updated to the resulting
+immutable image with the checked-in one-replica contract. The custom domain,
+managed certificate, and deployment class were preserved.
 
-## Known limits and next steps
+## Known limits
 
-- Physical Samsung Tizen, LG webOS, Fire TV Silk, and television remote hardware were not available. Chromium desktop and 390 px touch/remote emulation were used.
-- The single replica is intentional and release-critical. A future scale-out requires a shared room database and distributed rate limiter before changing `maxReplicas` above one.
+- One replica is release-critical while rooms and rate-limit state remain
+  local. Replace both with shared services before increasing `maxReplicas`.
+- Physical Samsung Tizen, LG webOS, Fire TV Silk, and television remote
+  hardware were unavailable. Chromium desktop, 390 px touch, and D-pad
+  emulation were exercised instead.
