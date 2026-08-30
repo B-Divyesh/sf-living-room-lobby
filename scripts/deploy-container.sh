@@ -40,7 +40,15 @@ app_name=sf-living-room-lobby
 registry=sociobotregistry
 resource_group=sociobot
 source_sha=$(git -C "$repo_dir" rev-parse HEAD)
-image_tag="$app_name:${source_sha:0:12}"
+if [[ ! "$source_sha" =~ ^[0-9a-f]{40}$ ]]; then
+  printf 'deployment requires a full Git source SHA, got %s\n' "$source_sha" >&2
+  exit 1
+fi
+if [[ -n "$(git -C "$repo_dir" status --porcelain --untracked-files=normal)" ]]; then
+  printf 'deployment requires a clean committed checkout\n' >&2
+  exit 1
+fi
+image_tag="$app_name:$source_sha"
 image="$registry.azurecr.io/$image_tag"
 
 az acr build --registry "$registry" --image "$image_tag" --file "$dockerfile" \
@@ -49,19 +57,40 @@ az acr build --registry "$registry" --image "$image_tag" --file "$dockerfile" \
   --build-arg "SOURCE_COMMIT=$source_sha" \
   "$repo_dir"
 az containerapp update --name "$app_name" --resource-group "$resource_group" \
-  --image "$image" --set-env-vars "PORT=$port" --min-replicas 1 --max-replicas 1
+  --image "$image" --set-env-vars "PORT=$port" --min-replicas 1 --max-replicas 1 \
+  --revision-suffix "${source_sha:0:12}"
 
-# `az containerapp update` has historically succeeded even when a later generic
-# deployment changed the scale settings. Refuse to report a successful repair
-# unless the active template really carries the one-replica boundary.
-readarray -t actual_scale < <(
-  az containerapp show --name "$app_name" --resource-group "$resource_group" \
-    --query '[properties.template.scale.minReplicas, properties.template.scale.maxReplicas]' \
-    --output tsv
-)
-if [[ "${actual_scale[0]:-}" != "1" || "${actual_scale[1]:-}" != "1" ]]; then
-  printf 'deployment scale verification failed: expected 1/1, got %s/%s\n' \
-    "${actual_scale[0]:-missing}" "${actual_scale[1]:-missing}" >&2
+# An accepted API update is not a successful release. Verification 6 found an
+# unhealthy latest revision while ingress continued serving the prior healthy
+# build. Wait until this exact image is the ready revision, and confirm that the
+# durable mount and one-replica contract survived the update.
+rollout_ready=false
+for _attempt in $(seq 1 60); do
+  read -r actual_image actual_latest actual_ready actual_min actual_max actual_mount actual_storage < <(
+    az containerapp show --name "$app_name" --resource-group "$resource_group" \
+      --query '[properties.template.containers[0].image, properties.latestRevisionName, properties.latestReadyRevisionName, properties.template.scale.minReplicas, properties.template.scale.maxReplicas, properties.template.containers[0].volumeMounts[?mountPath==`/data`].mountPath | [0], properties.template.volumes[?name==`data`].storageName | [0]]' \
+      --output tsv
+  )
+  if [[ "$actual_image" == "$image" && -n "$actual_latest" && "$actual_latest" == "$actual_ready" ]]; then
+    rollout_ready=true
+    break
+  fi
+  sleep 10
+done
+if [[ "$rollout_ready" != true ]]; then
+  printf 'deployment readiness verification failed: image=%s latest=%s ready=%s\n' \
+    "${actual_image:-missing}" "${actual_latest:-missing}" "${actual_ready:-missing}" >&2
   exit 1
 fi
-printf 'deployed %s with data path %s and scale 1/1\n' "$image" "$data_dir"
+if [[ "$actual_min" != "1" || "$actual_max" != "1" ]]; then
+  printf 'deployment scale verification failed: expected 1/1, got %s/%s\n' \
+    "${actual_min:-missing}" "${actual_max:-missing}" >&2
+  exit 1
+fi
+if [[ "$actual_mount" != "/data" || "$actual_storage" != "sf-living-room-lobby-data" ]]; then
+  printf 'deployment storage verification failed: expected sf-living-room-lobby-data at /data, got %s at %s\n' \
+    "${actual_storage:-missing}" "${actual_mount:-missing}" >&2
+  exit 1
+fi
+node "$repo_dir/scripts/verify-release.mjs" "$source_sha"
+printf 'deployed and verified %s with data path %s and scale 1/1\n' "$image" "$data_dir"

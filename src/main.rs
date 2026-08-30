@@ -4,6 +4,7 @@ use std::{
     env,
     net::SocketAddr,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use axum::{
@@ -16,13 +17,16 @@ use axum::{
     Json, Router,
 };
 use serde_json::{json, Value};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    Row,
+};
 use tower_http::{
     services::{ServeDir, ServeFile},
     set_header::SetResponseHeaderLayer,
     trace::TraceLayer,
 };
-use tracing::info;
+use tracing::{info, warn};
 
 use rooms::AppState;
 
@@ -174,6 +178,81 @@ fn sqlite_url(path: &Path) -> String {
     format!("sqlite://{}?mode=rwc", path.display())
 }
 
+fn is_database_locked(error: &impl std::fmt::Display) -> bool {
+    error
+        .to_string()
+        .to_ascii_lowercase()
+        .contains("database is locked")
+}
+
+/// SQLx always writes to its migration bookkeeping table before it decides
+/// whether there is new work.  During a revision handover that harmless write
+/// can conflict with the still-serving process on the durable SQLite file.
+/// Read the applied versions first, so a candidate whose schema is already
+/// current can start without taking that write lock.
+async fn migrations_are_current(pool: &sqlx::SqlitePool) -> Result<bool, sqlx::Error> {
+    let applied = match sqlx::query(
+        "SELECT version, checksum FROM _sqlx_migrations WHERE success = TRUE ORDER BY version",
+    )
+    .fetch_all(pool)
+    .await
+    {
+        Ok(rows) => rows,
+        Err(sqlx::Error::Database(error))
+            if error
+                .message()
+                .to_ascii_lowercase()
+                .contains("no such table: _sqlx_migrations") =>
+        {
+            return Ok(false);
+        }
+        Err(error) => return Err(error),
+    };
+    let applied = applied
+        .into_iter()
+        .map(|row| {
+            Ok::<_, sqlx::Error>((
+                row.try_get::<i64, _>("version")?,
+                row.try_get::<Vec<u8>, _>("checksum")?,
+            ))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let expected = sqlx::migrate!()
+        .iter()
+        .map(|migration| (migration.version, migration.checksum.to_vec()))
+        .collect::<Vec<_>>();
+    Ok(applied == expected)
+}
+
+/// A new Container Apps revision can briefly overlap the previous revision
+/// while both point at the single durable SQLite file. Keep the candidate
+/// alive until the previous file handle is released instead of entering a
+/// crash loop and leaving ingress on the old build.  When the schema already
+/// exists, `migrations_are_current` avoids the no-op bookkeeping write
+/// altogether.
+async fn migrate_with_lock_retry(
+    pool: &sqlx::SqlitePool,
+    attempts: u32,
+    delay: Duration,
+) -> Result<u32, sqlx::migrate::MigrateError> {
+    for attempt in 1..=attempts {
+        let result = match migrations_are_current(pool).await {
+            Ok(true) => return Ok(attempt),
+            Ok(false) => sqlx::migrate!().run(pool).await,
+            Err(error) => Err(error.into()),
+        };
+        match result {
+            Ok(()) => return Ok(attempt),
+            Err(error) if attempt < attempts && is_database_locked(&error) => {
+                warn!(attempt, "durable database is locked; retrying migration");
+                tokio::time::sleep(delay).await;
+            }
+            Err(error) => return Err(error),
+        }
+    }
+    unreachable!("the migration retry loop always returns")
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let log_filter = tracing_subscriber::EnvFilter::try_from_default_env()
@@ -193,12 +272,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (sqlite_url(&database_path), "generated", data_dir_source)
         }
     };
-    let options: SqliteConnectOptions = database_url.parse()?;
+    let options: SqliteConnectOptions = database_url
+        .parse::<SqliteConnectOptions>()?
+        .busy_timeout(Duration::from_secs(10));
     let pool = SqlitePoolOptions::new()
         .max_connections(8)
         .connect_with(options)
         .await?;
-    sqlx::migrate!().run(&pool).await?;
+    migrate_with_lock_retry(&pool, 30, Duration::from_secs(2)).await?;
 
     let state = AppState::new(pool);
     let (port, port_source) = match env::var("PORT").ok().and_then(|value| value.parse().ok()) {
@@ -417,6 +498,92 @@ mod tests {
             default_database_path(&root.join("absent"), &fallback);
         assert_eq!(fallback_path, fallback.join("lobby.db"));
         assert_eq!(fallback_source, "local-fallback");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn current_schema_starts_without_a_noop_migration_write() {
+        let root = std::env::temp_dir().join(format!(
+            "living-room-lobby-current-schema-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let database = root.join("lobby.db");
+        let url = sqlite_url(&database);
+        let setup = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&url)
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&setup).await.unwrap();
+        setup.close().await;
+
+        // A read-only connection can read the already-applied migration list,
+        // but would fail if startup unconditionally issued SQLx's no-op
+        // migration bookkeeping write. This matches the revision-handover
+        // failure where the previous process held the durable database lock.
+        let current = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&url)
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA query_only = ON")
+            .execute(&current)
+            .await
+            .unwrap();
+        assert!(migrations_are_current(&current).await.unwrap());
+        assert_eq!(
+            migrate_with_lock_retry(&current, 1, Duration::ZERO)
+                .await
+                .unwrap(),
+            1
+        );
+        current.close().await;
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn startup_waits_for_a_durable_database_lock() {
+        let root = std::env::temp_dir().join(format!(
+            "living-room-lobby-migration-lock-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let database = root.join("lobby.db");
+        let url = sqlite_url(&database);
+        let setup = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&url)
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&setup).await.unwrap();
+
+        let mut lock = setup.acquire().await.unwrap();
+        sqlx::query("BEGIN EXCLUSIVE")
+            .execute(&mut *lock)
+            .await
+            .unwrap();
+        let contender_options = url
+            .parse::<SqliteConnectOptions>()
+            .unwrap()
+            .busy_timeout(Duration::from_millis(20));
+        let contender = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(contender_options)
+            .await
+            .unwrap();
+        let release = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(120)).await;
+            sqlx::query("ROLLBACK").execute(&mut *lock).await.unwrap();
+        });
+
+        let attempt = migrate_with_lock_retry(&contender, 10, Duration::from_millis(25))
+            .await
+            .unwrap();
+        assert!(attempt > 1, "the migration did not encounter the held lock");
+        release.await.unwrap();
+        contender.close().await;
+        setup.close().await;
         std::fs::remove_dir_all(root).unwrap();
     }
 

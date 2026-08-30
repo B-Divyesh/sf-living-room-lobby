@@ -63,7 +63,11 @@ committed checkout with Azure access. Its checked-in
 `.factory/container-app.json` requires the durable `/data` mount and fixes both
 replica counts at one. Room state and per-client limits use the SQLite file at
 that path. Do not scale this deployment until those stores are replaced by
-shared services.
+shared services. The script tags the image with the full source commit, passes
+that same value as `BUILD_SHA`, waits for the exact revision to become ready,
+then checks uncached `/health` and a new service-worker cache before reporting
+success. It aborts if `/data` is no longer the `sf-living-room-lobby-data`
+mount or scale is no longer exactly one replica.
 
 ## Testing and accessibility
 
