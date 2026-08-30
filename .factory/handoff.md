@@ -29,6 +29,12 @@ while SQLx was issuing its no-op migration bookkeeping statement.
   replica and already serializes writes; reusing that one connection prevents a
   schema-read connection from holding an Azure Files lock while migration setup
   needs to write.
+- Azure Files rejects SQLite advisory file locks (confirmed with `flock` in
+  the product container), so the `/data` connection uses SQLite's lock-free
+  `unix-none` VFS. The deployment script first stops every active Living Room
+  Lobby revision and waits for graceful shutdown before starting the sole next
+  revision. This creates a short maintenance window but prevents overlapping
+  writers on the durable share.
 - A cancelled first migration had left `/data/lobby.db` at zero bytes plus a
   journal sidecar. Startup now moves only that invalid zero-byte database and
   any SQLite sidecars into `/data/recovery/` before opening SQLite. It never
@@ -63,7 +69,7 @@ npm run test:browser
 ```
 
 - `npm ci`: 94 packages, 0 reported vulnerabilities.
-- `npm test`: 4 Vitest, 4 release-delivery Node tests, and 16 Rust unit and
+- `npm test`: 4 Vitest, 4 release-delivery Node tests, and 17 Rust unit and
   integration tests passed.
 - TypeScript, Cargo check, Rust formatting, and warning-denied Clippy passed.
 - Production frontend: JavaScript 53.64 KB raw / 19.72 KB gzip; CSS 17.41 KB

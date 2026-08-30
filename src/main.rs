@@ -225,6 +225,22 @@ fn sqlite_pool_options() -> SqlitePoolOptions {
     SqlitePoolOptions::new().max_connections(1)
 }
 
+fn sqlite_connect_options(
+    database_url: &str,
+    uses_durable_network_volume: bool,
+) -> Result<SqliteConnectOptions, sqlx::Error> {
+    let options = database_url.parse::<SqliteConnectOptions>()?;
+    // Azure Files accepts normal file reads and writes but rejects SQLite's
+    // advisory byte-range locks. The deployment script keeps all other product
+    // revisions stopped before this single-replica process starts, so the
+    // lock-free VFS is safe here and lets SQLite persist under `/data`.
+    Ok(if uses_durable_network_volume {
+        options.vfs("unix-none")
+    } else {
+        options
+    })
+}
+
 fn is_database_locked(error: &impl std::fmt::Display) -> bool {
     error
         .to_string()
@@ -326,8 +342,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
             }
         };
-    let options: SqliteConnectOptions = database_url
-        .parse::<SqliteConnectOptions>()?
+    let options = sqlite_connect_options(&database_url, data_dir_source == "durable-data-mount")?
         .busy_timeout(Duration::from_secs(10));
     let pool = sqlite_pool_options().connect_with(options).await?;
     migrate_with_lock_retry(&pool, 30, Duration::from_secs(2)).await?;
@@ -549,6 +564,26 @@ mod tests {
             default_database_path(&root.join("absent"), &fallback);
         assert_eq!(fallback_path, fallback.join("lobby.db"));
         assert_eq!(fallback_source, "local-fallback");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn durable_network_volume_uses_the_lock_free_sqlite_vfs() {
+        let root = std::env::temp_dir().join(format!(
+            "living-room-lobby-network-vfs-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let database = root.join("lobby.db");
+        let pool = sqlite_pool_options()
+            .connect_with(sqlite_connect_options(&sqlite_url(&database), true).unwrap())
+            .await
+            .unwrap();
+        sqlx::query("CREATE TABLE durable_vfs_test (id INTEGER PRIMARY KEY)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        pool.close().await;
         std::fs::remove_dir_all(root).unwrap();
     }
 

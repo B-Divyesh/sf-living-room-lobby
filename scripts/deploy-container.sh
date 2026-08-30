@@ -56,6 +56,33 @@ az acr build --registry "$registry" --image "$image_tag" --file "$dockerfile" \
   --build-arg "GIT_SHA=$source_sha" \
   --build-arg "SOURCE_COMMIT=$source_sha" \
   "$repo_dir"
+
+# Azure Files rejects SQLite's advisory locks. The runtime therefore uses its
+# lock-free VFS only under the product's already-required one-replica boundary.
+# Stop any older product revisions before starting a candidate so two writers
+# can never overlap on /data during a handover. This deliberately creates a
+# short maintenance window after the image is safely built.
+readarray -t active_revisions < <(
+  az containerapp revision list --name "$app_name" --resource-group "$resource_group" \
+    --query '[?properties.active].name' --output tsv
+)
+if (( ${#active_revisions[@]} > 0 )); then
+  printf 'stopping %s active product revision(s) before durable SQLite handover\n' "${#active_revisions[@]}"
+  for revision in "${active_revisions[@]}"; do
+    az containerapp revision deactivate --name "$app_name" --resource-group "$resource_group" \
+      --revision "$revision" --output none
+  done
+  # Container Apps uses a graceful termination window. Give the previous
+  # process time to close its SQLite files before the next revision opens them.
+  sleep 35
+  remaining_active=$(az containerapp revision list --name "$app_name" --resource-group "$resource_group" \
+    --query 'length([?properties.active])' --output tsv)
+  if [[ "$remaining_active" != "0" ]]; then
+    printf 'deployment handover failed: %s old revision(s) remain active\n' "$remaining_active" >&2
+    exit 1
+  fi
+fi
+
 az containerapp update --name "$app_name" --resource-group "$resource_group" \
   --image "$image" --set-env-vars "PORT=$port" --min-replicas 1 --max-replicas 1 \
   --revision-suffix "${source_sha:0:12}"

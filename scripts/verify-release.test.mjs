@@ -46,11 +46,16 @@ test('deployment cannot report success before exact live identity verification',
   const deployScript = await readFile(`${root}/scripts/deploy-container.sh`, 'utf8');
   const updatePosition = deployScript.indexOf('az containerapp update');
   const verifyPosition = deployScript.indexOf('node "$repo_dir/scripts/verify-release.mjs" "$source_sha"');
+  const deactivatePosition = deployScript.indexOf('az containerapp revision deactivate');
   assert.match(deployScript, /source_sha=\$\(git -C "\$repo_dir" rev-parse HEAD\)/);
   assert.match(deployScript, /image_tag="\$app_name:\$source_sha"/);
   assert.match(deployScript, /--build-arg "BUILD_SHA=\$source_sha"/);
   assert.match(deployScript, /--revision-suffix "\$\{source_sha:0:12\}"/);
   assert.ok(updatePosition >= 0, 'Deployment must update the product container app.');
+  assert.ok(
+    deactivatePosition >= 0 && deactivatePosition < updatePosition,
+    'Deployment must stop older revisions before the lock-free durable SQLite candidate starts.',
+  );
   assert.ok(verifyPosition > updatePosition, 'Deployment must verify the exact candidate after the rollout.');
   assert.ok(
     deployScript.indexOf('properties.latestRevisionName') < verifyPosition
