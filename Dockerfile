@@ -13,12 +13,16 @@ COPY frontend ./frontend
 # local-development release identity when no argument is passed.
 RUN VITE_BUILD_ID="$BUILD_SHA" npm run build
 
-FROM rust:1-bookworm AS backend
+FROM rust:1-slim AS backend
 WORKDIR /app
 ARG BUILD_SHA
 COPY Cargo.toml Cargo.lock ./
 COPY migrations ./migrations
 COPY src ./src
+# The 404 document is compiled into the server so an unknown URL keeps the
+# product's navigation and accessible recovery action instead of returning a
+# bare server error.  It must be present in this independent Rust build stage.
+COPY frontend/public/404.html ./frontend/public/404.html
 # Compile the immutable deployment identity into /health.
 RUN BUILD_SHA="$BUILD_SHA" cargo build --release --locked
 
