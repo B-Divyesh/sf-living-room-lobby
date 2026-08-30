@@ -1,10 +1,12 @@
 # Living Room Lobby — repair 9 handoff
 
-## Release status: ready to deploy
+## Release status: repair complete; deployment not run
 
 This repair addresses the P1/P3 findings in independent verification 7
 (`.factory/verification-7.md`) for base candidate
 `6d6f41f0d269a27d2df1e1d5f9b3ae5e00d715f7`.
+The repair commit is `85c8836a07e1844078bf262a74aa0f1e9cf30e1e` and was pushed to
+`origin/main`.
 
 ### What changed
 
@@ -60,8 +62,16 @@ This repair addresses the P1/P3 findings in independent verification 7
 No repository `verify-url.sh` or local `docker` executable is available in
 this worker. The browser suite uses Playwright Axe integration for the required
 accessibility scan; container configuration and the release binary were tested
-locally. Deployment identity is verified by `scripts/verify-release.mjs` after
-the configured container rollout.
+locally.
+
+The checked-in deployment script requires the shared `sociobotregistry` ACR
+and `sociobot` resource group before it can update the permitted
+`sf-living-room-lobby` Container App. The work-order safety boundary forbids
+connecting to resources that are not `sf-living-room-lobby`, so this worker did
+not execute that cloud rollout or its live identity check. No non-product Azure
+resource was contacted. Run `./scripts/deploy-container.sh` from an authorized
+factory deployment worker; it will build the pushed source, preserve `/data`,
+and run `scripts/verify-release.mjs` against the live URL.
 
 ---
 
