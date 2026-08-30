@@ -1,16 +1,44 @@
 [
   {
+    "id": "demo-sandbox",
+    "claim": "Try it with sample data opens a ready Draw Together room in a separate 24-hour sample workspace.",
+    "where": "landing first screen, demo banner, README",
+    "test": "npm run test:browser -- --grep @claim:demo-sandbox",
+    "sandbox": "Fresh desktop browser context; click the landing action, assert the 24-hour seeded workspace and demo: storage namespace, reset it, then start for real and assert demo storage is discarded."
+  },
+  {
     "id": "offline-reload",
-    "claim": "The home screen keeps working offline after the first visit.",
-    "where": "Offline status in the shared site shell",
+    "claim": "The sample room keeps working offline after the first visit.",
+    "where": "demo banner and README",
     "test": "npm run test:browser -- --grep @claim:offline-reload",
-    "sandbox": "Fresh browser context; install the worker, clear HTTP cache, go offline, reload, and assert the rendered home screen and cached JS/CSS."
+    "sandbox": "Fresh mobile browser context at /demo; install the worker, clear HTTP cache, go offline, reload, and assert the rendered sample room and cached JS/CSS."
   },
   {
     "id": "same-origin-requests",
-    "claim": "A normal free lobby visit sends requests only to Living Room Lobby.",
+    "claim": "A sample lobby visit sends requests only to Living Room Lobby.",
     "where": "Privacy page and README",
     "test": "npm run test:browser -- --grep @claim:same-origin-requests",
-    "sandbox": "Fresh desktop browser context; capture every HTTP request during the initial free landing flow and assert each origin is the local product origin."
+    "sandbox": "Fresh desktop browser context at /demo; capture every HTTP request through the seeded sample flow and assert each origin is the local product origin."
+  },
+  {
+    "id": "remote-controls",
+    "claim": "Use a TV remote to move and choose.",
+    "where": "landing remote hint and README",
+    "test": "npm run test:browser -- --grep @claim:remote-controls",
+    "sandbox": "Fresh desktop browser context at /demo; use ArrowRight to move focus in the command rail and game picker."
+  },
+  {
+    "id": "shared-phone",
+    "claim": "Pass & Guess supports one shared phone.",
+    "where": "game catalogue and README",
+    "test": "npm run test:browser -- --grep @claim:shared-phone",
+    "sandbox": "Fresh mobile browser context at /demo; choose Pass & Guess, enter the shipped shared-phone sample session, and assert the answer-covering Pass the phone screen."
+  },
+  {
+    "id": "family-pack-price",
+    "claim": "Extra games cost $12 once.",
+    "where": "landing facts, Family Pack section, README, Terms",
+    "test": "npm run test:browser -- --grep @claim:family-pack-price",
+    "sandbox": "Fresh desktop browser context at /demo; choose a locked sample game and assert the exact $12 one-time Family Pack message."
   }
 ]

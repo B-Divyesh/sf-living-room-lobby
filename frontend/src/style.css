@@ -42,9 +42,15 @@ kbd { display: inline-grid; min-width: 30px; min-height: 30px; margin: 0 3px; pa
 :focus-visible { outline: 4px solid var(--moss); outline-offset: 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; clip: rect(0,0,0,0); overflow: hidden; white-space: nowrap; border: 0; }
 
+.demo-banner { min-height: 48px; padding: 6px 4vw; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 16px; color: #11150f; background: var(--moss); font-size: .88rem; }
+.demo-banner b { font-family: var(--display); letter-spacing: .02em; }
+.demo-banner div { display: flex; gap: 8px; }
+.demo-banner .text-button { min-height: 44px; padding: 4px 8px; color: #11150f; font-weight: 900; }
 .topbar { min-height: 72px; padding: 12px 4vw; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #687168; background: #151a17e8; }
 .wordmark { min-height: 44px; padding-block: 1px; display: inline-flex; align-items: center; gap: 12px; color: var(--ink); font: 700 .95rem var(--body); text-decoration: none; text-transform: uppercase; letter-spacing: .08em; }
 .wordmark span { width: 42px; height: 42px; display: grid; place-items: center; color: #11150f; background: var(--moss); font: 900 .85rem var(--display); clip-path: polygon(0 0, 90% 0, 100% 78%, 26% 100%, 0 76%); }
+.topbar nav { display: flex; align-items: center; gap: 16px; margin-right: auto; }
+.topbar nav a { min-height: 44px; padding: 8px; display: inline-flex; align-items: center; color: var(--lichen); font-size: .88rem; font-weight: 800; }
 .network { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .85rem; }
 .network i { width: 10px; height: 10px; border: 2px solid var(--night); border-radius: 50%; background: var(--moss); box-shadow: 0 0 0 1px var(--moss); }
 .network.is-offline i { background: var(--warning); box-shadow: 0 0 0 1px var(--warning); }
@@ -63,6 +69,10 @@ kbd { display: inline-grid; min-width: 30px; min-height: 30px; margin: 0 3px; pa
 .button.primary { color: #11150f; border-color: var(--moss); background: var(--moss); }
 .button.secondary { color: var(--ink); background: var(--concrete); }
 .text-button { min-height: 48px; padding: 8px; border: 0; color: var(--lichen); background: transparent; text-decoration: underline; cursor: pointer; }
+.action-explanation { margin: 18px 0 0; color: var(--lichen); font-size: .94rem; font-weight: 800; }
+.plain-facts { margin: 20px 0 0; padding: 0; display: grid; gap: 7px; color: var(--muted); font-size: .92rem; list-style: none; }
+.plain-facts li { display: flex; align-items: baseline; gap: 8px; }
+.plain-facts li::before { content: "•"; color: var(--moss); font-size: 1.25em; }
 .remote-hint { margin: 28px 0 0; color: var(--muted); font-size: .84rem; }
 .hero-art { position: relative; margin: 0; border: 4px solid #687168; background: var(--concrete); box-shadow: 16px 16px 0 #080a09; transform: rotate(1.2deg); }
 .hero-art::after { position: absolute; inset: 0; content: ""; box-shadow: inset 0 0 0 8px #151a1759; pointer-events: none; }
@@ -202,6 +212,8 @@ footer a { min-width: 44px; min-height: 44px; padding: 6px; display: inline-flex
   .topbar { min-height: 62px; padding-inline: 16px; }
   .wordmark { font-size: .72rem; }
   .wordmark span { width: 36px; height: 36px; }
+  .topbar nav { order: 3; width: 100%; margin-right: 0; justify-content: space-between; }
+  .topbar nav a { min-height: 44px; }
   .network { font-size: .72rem; }
   .hero { padding: 24px 16px 56px; gap: 48px; }
   .hero-art { margin-inline: -20px; border-inline: 0; box-shadow: none; transform: none; }
@@ -210,6 +222,7 @@ footer a { min-width: 44px; min-height: 44px; padding: 6px; display: inline-flex
   .hero h1 { font-size: clamp(3.5rem, 18vw, 5.5rem); }
   .hero-actions { display: grid; }
   .hero-actions .button { width: 100%; }
+  .demo-banner { padding-inline: 16px; }
   .join-panel, .how, .catalogue, .family-pack { padding: 56px 16px; }
   fieldset { grid-template-columns: 1fr; }
   .game-strip { margin-inline: -16px; padding-inline: 16px; }

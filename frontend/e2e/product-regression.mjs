@@ -63,12 +63,46 @@ async function checkDesktopAndPrivacy(browser) {
     if (request.url().startsWith('http')) requests.push(new URL(request.url()).origin);
   });
   try {
-    await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
-    assert.equal(await page.title(), 'Living Room Lobby — everyone gets a turn');
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    assert.equal(await page.title(), 'Demo — Living Room Lobby');
     assert.equal(await page.locator('main h1').count(), 1);
+    assert.match(await page.locator('.demo-banner').textContent(), /Demo — sample data, nothing is saved/);
     await assertAxeClean(page, 'desktop home');
     assert.ok(requests.every((origin) => origin === baseUrl), `Unexpected request origin: ${requests.join(', ')}`);
     assert.deepEqual(errors, [], `Desktop console/page errors: ${errors.join(' | ')}`);
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkDemoSandbox(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    const workspaceResponse = page.waitForResponse((response) => response.url() === `${baseUrl}/api/demo` && response.request().method() === 'POST');
+    await page.getByRole('link', { name: /Try it with sample data/ }).click();
+    await page.waitForURL(`${baseUrl}/demo`);
+    const seededWorkspace = await workspaceResponse;
+    assert.equal(seededWorkspace.status(), 200);
+    const seededPayload = await seededWorkspace.json();
+    assert.equal(seededPayload.expiresInSeconds, 86_400);
+    assert.equal(seededPayload.room.players.length, 3);
+    await page.getByRole('heading', { name: /Draw together/i }).waitFor();
+    assert.match(await page.locator('.demo-banner').textContent(), /nothing is saved/);
+    assert.equal(await page.locator('#tv-canvas').count(), 1);
+    const storage = await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage) }));
+    assert.ok(storage.local.some((key) => key.startsWith('demo:living-room-lobby:')), `No demo localStorage namespace: ${storage.local.join(', ')}`);
+    assert.ok(storage.session.some((key) => key.startsWith('demo:living-room-lobby:')), `No demo sessionStorage namespace: ${storage.session.join(', ')}`);
+    assert.ok(storage.session.includes('demo:living-room-lobby:workspace'), 'Demo did not retain its isolated backend workspace id.');
+    await page.locator('#reset-demo').click();
+    await page.getByRole('heading', { name: /Draw together/i }).waitFor();
+    await page.locator('#start-real').click();
+    await page.waitForURL(`${baseUrl}/`);
+    assert.equal(await page.locator('#host-room').count(), 1);
+    const afterStart = await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage) }));
+    assert.ok(!afterStart.local.some((key) => key.startsWith('demo:')), 'Start for real left demo data in localStorage.');
+    assert.ok(!afterStart.session.some((key) => key.startsWith('demo:')), 'Start for real left demo data in sessionStorage.');
   } finally {
     await context.close();
   }
@@ -175,6 +209,71 @@ async function checkCoreRoomFlow(browser) {
   }
 }
 
+async function checkSharedRoomReads() {
+  const client = '198.51.100.77';
+  const created = await fetch(`${baseUrl}/api/rooms`, { method: 'POST', headers: { 'x-forwarded-for': client } });
+  assert.equal(created.status, 200);
+  const payload = await created.json();
+  const reads = await Promise.all(Array.from({ length: 20 }, () => fetch(`${baseUrl}/api/rooms/${payload.code}`, {
+    headers: { 'cache-control': 'no-store', 'x-forwarded-for': client },
+  })));
+  assert.deepEqual(reads.map((response) => response.status), Array(20).fill(200), 'Every immediate room read must reach the created room.');
+  const rooms = await Promise.all(reads.map((response) => response.json()));
+  assert.ok(rooms.every((entry) => entry.room.code === payload.code), 'A room read returned another room.');
+}
+
+async function checkRemoteControls(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.locator('#end-game').focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.locator('#next-round').evaluate((element) => document.activeElement === element), true);
+    await page.locator('#end-game').click();
+    await page.locator('[data-game="draw"]').focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.locator('[data-game="point"]').evaluate((element) => document.activeElement === element), true);
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkSharedPhoneDemo(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.locator('#end-game').click();
+    await page.locator('[data-game="pass"]').click();
+    await page.evaluate(() => sessionStorage.setItem('demo:living-room-lobby:session', JSON.stringify({
+      role: 'player', code: 'DEMO', token: 'demo-player-demo-marc', playerId: 'demo-marc', name: 'Marcos', mode: 'shared',
+    })));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.locator('#pass-card').click();
+    await page.getByRole('heading', { name: 'Pass the phone' }).waitFor();
+    assert.equal(await page.locator('#next-person').count(), 1);
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkFamilyPackPrice(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.locator('#end-game').click();
+    await page.locator('[data-game="statue"]').click();
+    await page.locator('.toast.show').waitFor();
+    assert.match(await page.locator('.toast.show').textContent(), /\$12 one-time Family Pack/);
+    await page.locator('[data-game="draw"]').click();
+    await page.locator('#tv-canvas').waitFor();
+  } finally {
+    await context.close();
+  }
+}
+
 async function checkColdOfflineReload(browser) {
   // This context is intentionally independent: it proves a first service-worker
   // install without reusing another browser context's cache or connection state.
@@ -182,7 +281,7 @@ async function checkColdOfflineReload(browser) {
   const page = await context.newPage();
   const errors = recordErrors(page);
   try {
-    await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     const cacheEntries = await page.evaluate(async () => {
@@ -202,7 +301,7 @@ async function checkColdOfflineReload(browser) {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.locator('main h1').waitFor();
     assert.equal(await page.locator('main h1').count(), 1);
-    assert.equal(await page.locator('#host-room').count(), 1);
+    assert.equal(await page.locator('.demo-banner').count(), 1);
     assert.equal(await page.locator('.topbar').evaluate((element) => getComputedStyle(element).borderBottomStyle), 'solid');
     assert.deepEqual(errors, [], `Cold offline reload emitted errors: ${errors.join(' | ')}`);
   } finally {
@@ -225,8 +324,13 @@ try {
   const browser = await chromium.launch({ headless: true });
   try {
     if (included('@claim:same-origin-requests') || !grep) await checkDesktopAndPrivacy(browser);
+    if (included('@claim:demo-sandbox') || !grep) await checkDemoSandbox(browser);
     if (included('@regression:mobile-a11y') || !grep) await checkMobileCatalogueAndPointA11y(browser);
     if (included('@regression:core-room-flow') || !grep) await checkCoreRoomFlow(browser);
+    if (included('@regression:shared-room-store') || !grep) await checkSharedRoomReads();
+    if (included('@claim:remote-controls') || !grep) await checkRemoteControls(browser);
+    if (included('@claim:shared-phone') || !grep) await checkSharedPhoneDemo(browser);
+    if (included('@claim:family-pack-price') || !grep) await checkFamilyPackPrice(browser);
     if (included('@claim:offline-reload') || !grep) await checkColdOfflineReload(browser);
   } finally {
     await browser.close();

@@ -30,6 +30,7 @@ const ROOM_CREATION_LIMIT: u32 = 12;
 const ROOM_CREATION_WINDOW: Duration = Duration::from_secs(60);
 const API_REQUEST_LIMIT: u32 = 40;
 const API_REQUEST_WINDOW: Duration = Duration::from_secs(1);
+const DEMO_WORKSPACE_TTL_SECONDS: i64 = 86_400;
 
 #[derive(Clone, Copy)]
 struct RateWindow {
@@ -221,6 +222,12 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route_layer(middleware::from_fn_with_state(state, api_rate_limit))
 }
 
+pub fn demo_router(state: AppState) -> Router<AppState> {
+    Router::new()
+        .route("/", post(create_demo_workspace))
+        .route_layer(middleware::from_fn_with_state(state, api_rate_limit))
+}
+
 async fn api_rate_limit(State(state): State<AppState>, request: Request, next: Next) -> Response {
     if state
         .allow_api_request(&client_key(request.headers()))
@@ -272,6 +279,156 @@ async fn create_room(
         }
     }
     Err(ApiError::internal("Could not make a room. Try again."))
+}
+
+async fn create_demo_workspace(State(state): State<AppState>) -> Result<Json<Value>, ApiError> {
+    let _guard = state.write_lock.lock().await;
+    let room = sample_room();
+    let workspace = random_id(24);
+    let serialized = serde_json::to_string(&room)
+        .map_err(|_| ApiError::internal("Could not prepare the sample room."))?;
+    sqlx::query("DELETE FROM demo_workspaces WHERE expires_at <= unixepoch()")
+        .execute(&state.pool)
+        .await?;
+    sqlx::query(
+        "INSERT INTO demo_workspaces(id, state_json, expires_at) VALUES (?, ?, unixepoch() + ?)",
+    )
+    .bind(&workspace)
+    .bind(serialized)
+    .bind(DEMO_WORKSPACE_TTL_SECONDS)
+    .execute(&state.pool)
+    .await?;
+    Ok(Json(json!({
+        "workspace": workspace,
+        "expiresInSeconds": DEMO_WORKSPACE_TTL_SECONDS,
+        "room": room.public(),
+    })))
+}
+
+fn sample_room() -> InternalRoom {
+    InternalRoom {
+        code: "DEMO".into(),
+        revision: 1,
+        stage: "playing".into(),
+        game: Some("draw".into()),
+        prompt: "BIRTHDAY CAKE".into(),
+        round: 2,
+        players: vec![
+            InternalPlayer {
+                id: "demo-asha".into(),
+                token: "sample-asha".into(),
+                name: "Asha".into(),
+                mode: "solo".into(),
+                color: "#ff8a5b".into(),
+                score: 3,
+                x: 29.0,
+                y: 41.0,
+            },
+            InternalPlayer {
+                id: "demo-marc".into(),
+                token: "sample-marc".into(),
+                name: "Marcos".into(),
+                mode: "shared".into(),
+                color: "#82c7d8".into(),
+                score: 2,
+                x: 62.0,
+                y: 52.0,
+            },
+            InternalPlayer {
+                id: "demo-lee".into(),
+                token: "sample-lee".into(),
+                name: "Lee and Bo".into(),
+                mode: "shared".into(),
+                color: "#b7d43d".into(),
+                score: 2,
+                x: 75.0,
+                y: 33.0,
+            },
+        ],
+        drawing: vec![
+            StrokePoint {
+                x: 27.0,
+                y: 64.0,
+                color: "#ff8a5b".into(),
+                start: true,
+            },
+            StrokePoint {
+                x: 35.0,
+                y: 50.0,
+                color: "#ff8a5b".into(),
+                start: false,
+            },
+            StrokePoint {
+                x: 42.0,
+                y: 64.0,
+                color: "#ff8a5b".into(),
+                start: false,
+            },
+            StrokePoint {
+                x: 29.0,
+                y: 58.0,
+                color: "#ff8a5b".into(),
+                start: true,
+            },
+            StrokePoint {
+                x: 40.0,
+                y: 58.0,
+                color: "#ff8a5b".into(),
+                start: false,
+            },
+            StrokePoint {
+                x: 50.0,
+                y: 62.0,
+                color: "#82c7d8".into(),
+                start: true,
+            },
+            StrokePoint {
+                x: 50.0,
+                y: 43.0,
+                color: "#82c7d8".into(),
+                start: false,
+            },
+            StrokePoint {
+                x: 43.0,
+                y: 43.0,
+                color: "#82c7d8".into(),
+                start: false,
+            },
+            StrokePoint {
+                x: 57.0,
+                y: 43.0,
+                color: "#82c7d8".into(),
+                start: true,
+            },
+            StrokePoint {
+                x: 50.0,
+                y: 35.0,
+                color: "#82c7d8".into(),
+                start: false,
+            },
+            StrokePoint {
+                x: 64.0,
+                y: 66.0,
+                color: "#b7d43d".into(),
+                start: true,
+            },
+            StrokePoint {
+                x: 70.0,
+                y: 53.0,
+                color: "#b7d43d".into(),
+                start: false,
+            },
+            StrokePoint {
+                x: 77.0,
+                y: 66.0,
+                color: "#b7d43d".into(),
+                start: false,
+            },
+        ],
+        target_x: 54.0,
+        target_y: 47.0,
+        message: "Asha added the candles.".into(),
+    }
 }
 
 /// Azure Container Apps forwards the original client address in
@@ -656,5 +813,53 @@ mod tests {
             .unwrap();
         assert_eq!(limited.status(), StatusCode::TOO_MANY_REQUESTS);
         assert_eq!(limited.headers()[header::RETRY_AFTER], "1");
+    }
+
+    #[tokio::test]
+    async fn two_app_instances_can_read_the_same_room_from_one_sqlite_store() {
+        let path =
+            std::env::temp_dir().join(format!("living-room-lobby-shared-{}.db", random_id(12)));
+        let database_url = format!("sqlite://{}?mode=rwc", path.display());
+        let first_pool = SqlitePool::connect(&database_url).await.unwrap();
+        sqlx::migrate!().run(&first_pool).await.unwrap();
+        let second_pool = SqlitePool::connect(&database_url).await.unwrap();
+        let first_state = AppState::new(first_pool);
+        let second_state = AppState::new(second_pool);
+        let first = router(first_state.clone()).with_state(first_state);
+        let second = router(second_state.clone()).with_state(second_state);
+
+        let created = first
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/")
+                    .header("x-forwarded-for", "203.0.113.201")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(created.status(), StatusCode::OK);
+        let created: Value =
+            serde_json::from_slice(&created.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        let code = created["code"].as_str().unwrap();
+
+        for _ in 0..20 {
+            let response = second
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri(format!("/{code}"))
+                        .header("x-forwarded-for", "203.0.113.202")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+        }
+
+        let _ = std::fs::remove_file(path);
     }
 }

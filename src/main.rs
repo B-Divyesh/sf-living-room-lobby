@@ -7,8 +7,8 @@ use axum::{
     extract::Request,
     http::{header, HeaderName, HeaderValue, StatusCode},
     middleware::{self, Next},
-    response::Response,
-    routing::get,
+    response::{Html, Response},
+    routing::{get, get_service},
     Json, Router,
 };
 use serde_json::{json, Value};
@@ -25,9 +25,15 @@ use rooms::AppState;
 fn app(state: AppState, static_dir: &str) -> Router {
     let index = Path::new(static_dir).join("index.html");
     Router::new()
+        .route("/", get_service(ServeFile::new(index.clone())))
+        .route("/demo", get_service(ServeFile::new(index.clone())))
+        .route("/privacy", get_service(ServeFile::new(index.clone())))
+        .route("/terms", get_service(ServeFile::new(index)))
+        .route("/404", get(not_found_page))
         .route("/health", get(health))
+        .nest("/api/demo", rooms::demo_router(state.clone()))
         .nest("/api/rooms", rooms::router(state.clone()))
-        .fallback_service(ServeDir::new(static_dir).fallback(ServeFile::new(index)))
+        .fallback_service(ServeDir::new(static_dir))
         .with_state(state)
         .layer(SetResponseHeaderLayer::if_not_present(
             header::X_CONTENT_TYPE_OPTIONS,
@@ -111,6 +117,13 @@ async fn health() -> (StatusCode, Json<Value>) {
             "status": "ok",
             "build": option_env!("BUILD_SHA").unwrap_or("development")
         })),
+    )
+}
+
+async fn not_found_page() -> (StatusCode, Html<&'static str>) {
+    (
+        StatusCode::NOT_FOUND,
+        Html(include_str!("../frontend/public/404.html")),
     )
 }
 
@@ -230,6 +243,47 @@ mod tests {
             "max-age=31536000; includeSubDomains"
         );
         assert!(headers.contains_key("permissions-policy"));
+    }
+
+    #[tokio::test]
+    async fn not_found_route_is_a_styled_404_not_the_application_shell() {
+        let response = test_app()
+            .await
+            .oneshot(Request::builder().uri("/404").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            response.headers()[header::CACHE_CONTROL],
+            "no-cache, must-revalidate"
+        );
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        assert!(std::str::from_utf8(&body)
+            .unwrap()
+            .contains("That page is not here."));
+    }
+
+    #[tokio::test]
+    async fn demo_route_seeds_an_isolated_twenty_four_hour_workspace() {
+        let response = test_app()
+            .await
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/demo")
+                    .header("x-forwarded-for", "203.0.113.71")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let workspace: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(workspace["expiresInSeconds"], 86_400);
+        assert_eq!(workspace["room"]["code"], "DEMO");
+        assert_eq!(workspace["room"]["players"].as_array().unwrap().len(), 3);
+        assert_eq!(workspace["workspace"].as_str().unwrap().len(), 24);
     }
 
     #[test]

@@ -18,7 +18,7 @@ export default defineConfig({
       const serviceWorker = resolve(import.meta.dirname, '../dist/sw.js');
       const index = readFileSync(resolve(import.meta.dirname, '../dist/index.html'), 'utf8');
       const hashedAssets = [...index.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((match) => match[1]);
-      const shell = ['/', '/privacy', '/terms', '/manifest.webmanifest', '/assets/lobby-hero.webp', ...hashedAssets];
+      const shell = ['/', '/demo', '/privacy', '/terms', '/manifest.webmanifest', '/assets/lobby-hero.webp', ...hashedAssets];
       const source = readFileSync(serviceWorker, 'utf8');
       const output = source
         .replaceAll('__BUILD_ID__', releaseId(process.env.VITE_BUILD_ID))

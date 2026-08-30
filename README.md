@@ -1,9 +1,13 @@
 # Living Room Lobby
 
-Living Room Lobby is a small set of language-light party games made for a
-smart-TV browser. It is for multigenerational families who do not have a game
-console or laptop at the TV, and for groups where not everyone has—or should
-need—a phone.
+Living Room Lobby brings phone-optional party games to a smart-TV browser. It
+is for multigenerational families sharing one screen.
+
+Open [/demo](/demo) or choose **Try it with sample data** on the landing page
+to see a ready Draw Together round with Asha, Marcos, and Lee and Bo. A demo
+visit gets its own 24-hour sample workspace. Playable state uses
+`demo:living-room-lobby:` browser storage and is discarded by **Start for
+real**. It never uses or changes a real room.
 
 The free room includes:
 
@@ -19,8 +23,8 @@ payment-provider code or product IDs.
 
 - Vite + strict TypeScript, with no UI framework or hosted assets
 - Rust 2021, Axum, and SQLite via SQLx
-- Compact one-second HTTP polling for old WebKit/Chromium TV browsers
-- Six-hour ephemeral rooms; no accounts and no player profiles
+- HTTP polling for old WebKit/Chromium TV browsers
+- Local room sessions and no player profiles
 - One container serves the compiled frontend and API on `PORT`
 
 ## Develop
@@ -56,23 +60,20 @@ its tarball build, and the compiled `/health` response identifies that release.
 ## Testing and accessibility
 
 `npm test` runs prompt/catalogue tests and Rust API room-flow tests. `npm run
-test:browser` starts a clean local product server and verifies the desktop and
-390 px flows, keyboard/remote controls, Axe WCAG 2 A/AA checks, same-origin
-free-flow requests, and a cold-cache offline reload. The claim commands live
-in [`.factory/claims.json`](.factory/claims.json).
+test:browser` starts a clean local product server and verifies desktop and 390
+px flows, keyboard/remote controls, Axe WCAG 2 A/AA checks, real host/phone
+play, immediate room reads, demo privacy, and a cold-cache offline reload. The
+claim commands live in [`.factory/claims.json`](.factory/claims.json) and all
+start from the demo route.
 
 The UI has a skip link, one page-level heading, labelled controls, visible
 focus, a keyboard-scrollable mobile game catalogue, a remote D-pad navigation
 path, 44 px navigation targets, reduced-motion behavior, and offline feedback.
-The room API has a 40-request-per-second per-client guard and a stricter
-12-room-per-minute creation guard. Because the service deliberately uses a
-single SQLite room store, its Container App is deployed with one replica.
 
 ## Privacy and license
 
-See `/privacy` and `/terms` in the running application. Room state expires
-after six hours. Family Pack license tokens remain only in the browser’s local
-storage and are verified against the Sociobot API at most daily.
+See `/privacy` and `/terms` in the running application. Family Pack license
+tokens remain in the browser’s local storage.
 
 MIT licensed. Generated-image provenance and visual tokens are documented in
 [`.factory/design.md`](.factory/design.md).

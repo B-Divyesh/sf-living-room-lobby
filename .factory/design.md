@@ -82,6 +82,9 @@ Generated asset: `frontend/public/assets/lobby-hero.webp`, created 2026-08-27
 using the Param Factory Azure image deployment via `/opt/fleet/lib/gen-image.sh`.
 The complete prompt is stored at `assets/src/lobby-hero.prompt.json`. The asset is
 original AI-generated artwork for this product and is disclosed in the footer.
+`frontend/public/assets/lobby-social.webp` is a 1200×630 WebP crop derived from
+that same original hero for Open Graph and Twitter previews; it introduces no
+new imagery or text.
 
 ## Responsive intent
 
