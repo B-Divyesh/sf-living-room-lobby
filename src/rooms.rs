@@ -24,9 +24,9 @@ pub struct AppState {
 }
 
 const ROOM_CREATION_LIMIT: u32 = 12;
-const ROOM_CREATION_WINDOW_SECONDS: i64 = 60;
+const ROOM_CREATION_WINDOW_MILLISECONDS: i64 = 60_000;
 const API_REQUEST_LIMIT: u32 = 40;
-const API_REQUEST_WINDOW_SECONDS: i64 = 1;
+const API_REQUEST_WINDOW_MILLISECONDS: i64 = 1_000;
 const DEMO_WORKSPACE_TTL_SECONDS: i64 = 86_400;
 
 impl AppState {
@@ -37,24 +37,30 @@ impl AppState {
         }
     }
 
-    async fn allow_room_creation(&self, client: &str) -> Result<bool, sqlx::Error> {
+    async fn allow_room_creation(
+        &self,
+        client: &str,
+        arrived_at: i64,
+    ) -> Result<bool, sqlx::Error> {
         allow_within(
             self,
             "room-creation",
             client,
             ROOM_CREATION_LIMIT,
-            ROOM_CREATION_WINDOW_SECONDS,
+            ROOM_CREATION_WINDOW_MILLISECONDS,
+            arrived_at,
         )
         .await
     }
 
-    async fn allow_api_request(&self, client: &str) -> Result<bool, sqlx::Error> {
+    async fn allow_api_request(&self, client: &str, arrived_at: i64) -> Result<bool, sqlx::Error> {
         allow_within(
             self,
             "api-request",
             client,
             API_REQUEST_LIMIT,
-            API_REQUEST_WINDOW_SECONDS,
+            API_REQUEST_WINDOW_MILLISECONDS,
+            arrived_at,
         )
         .await
     }
@@ -65,16 +71,21 @@ async fn allow_within(
     bucket: &str,
     client: &str,
     limit: u32,
-    window_seconds: i64,
+    window_milliseconds: i64,
+    arrived_at: i64,
 ) -> Result<bool, sqlx::Error> {
     // This is kept in SQLite rather than process memory.  It means a process
     // restart cannot erase an active limit, and it shares the same durable
     // boundary as rooms when `/data` is mounted.  The product is still pinned
     // to one replica because SQLite is the room store.
     let _guard = state.write_lock.lock().await;
-    let now = unix_seconds();
+    // Record arrival time before a SQLite lock is awaited. A concurrent burst
+    // must not become a sequence of fresh windows merely because durable
+    // storage is slow: verification found that 41 simultaneous demo requests
+    // could otherwise cross a one-second boundary while queued.
+    let now = arrived_at;
     sqlx::query("DELETE FROM rate_limits WHERE window_started <= ?")
-        .bind(now - ROOM_CREATION_WINDOW_SECONDS)
+        .bind(now - ROOM_CREATION_WINDOW_MILLISECONDS)
         .execute(&state.pool)
         .await?;
     let current = sqlx::query(
@@ -88,7 +99,7 @@ async fn allow_within(
     if let Some(row) = current {
         let started: i64 = row.try_get("window_started")?;
         let requests: i64 = row.try_get("request_count")?;
-        if now - started < window_seconds {
+        if now - started < window_milliseconds {
             if requests >= i64::from(limit) {
                 return Ok(false);
             }
@@ -123,11 +134,11 @@ async fn allow_within(
     Ok(true)
 }
 
-fn unix_seconds() -> i64 {
+fn unix_milliseconds() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
-        .as_secs() as i64
+        .as_millis() as i64
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -270,10 +281,9 @@ pub fn demo_router(state: AppState) -> Router<AppState> {
 }
 
 async fn api_rate_limit(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    match state
-        .allow_api_request(&client_key(request.headers()))
-        .await
-    {
+    let arrived_at = unix_milliseconds();
+    let client = client_key(request.headers());
+    match state.allow_api_request(&client, arrived_at).await {
         Ok(true) => next.run(request).await,
         Ok(false) => ApiError::too_many_requests().into_response(),
         Err(_) => ApiError::internal("The lobby is having trouble. Try again.").into_response(),
@@ -284,7 +294,11 @@ async fn create_room(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, ApiError> {
-    if !state.allow_room_creation(&client_key(&headers)).await? {
+    let arrived_at = unix_milliseconds();
+    if !state
+        .allow_room_creation(&client_key(&headers), arrived_at)
+        .await?
+    {
         return Err(ApiError::too_many());
     }
     cleanup(&state.pool).await;
