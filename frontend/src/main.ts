@@ -79,7 +79,7 @@ async function pollRoom(): Promise<void> {
 
 function shell(content: string, page = 'game'): void {
   app.innerHTML = `
-    ${demoMode() ? '<aside class="demo-banner" aria-label="Demo controls"><b>Demo — sample data, nothing is saved</b><span>Try the ready game.</span><div><button class="text-button" id="reset-demo">Reset demo</button><button class="text-button" id="start-real">Start for real</button></div></aside>' : ''}
+    ${demoMode() ? '<aside class="demo-banner" aria-label="Demo controls"><b>Demo — sample data, nothing is saved to a real room</b><span>Sample workspace expires after 24 hours.</span><div><button class="text-button" id="reset-demo">Reset demo</button><button class="text-button" id="start-real">Start for real</button></div></aside>' : ''}
     <header class="topbar">
       <a class="wordmark" href="/" data-nav><span aria-hidden="true">LR</span> Living Room Lobby</a>
       <nav aria-label="Primary"><a href="${DEMO_PATH}" data-nav>Demo</a><a href="/privacy" data-nav>Privacy</a></nav>
@@ -122,7 +122,7 @@ function renderHome(): void {
           <button class="button secondary" id="show-join">Join a room</button>
         </div>
         <p class="action-explanation">See a ready Draw Together round with three sample families.</p>
-        <ul class="plain-facts"><li>Try the sample without an account.</li><li>Sample play stays in this browser.</li><li>Extra games cost $12 once.</li></ul>
+        <ul class="plain-facts"><li>Try the sample without an account.</li><li>Sample play never changes a real room.</li><li>Extra games cost $12 once.</li></ul>
         <p class="remote-hint"><kbd>↑</kbd><kbd>↓</kbd><kbd>OK</kbd> Use a TV remote to move and choose.</p>
       </div>
       <figure class="hero-art"><picture><img src="/assets/lobby-hero.webp" width="1536" height="1024" alt="A cozy concrete living room with chairs, cushions, a shared phone and playful hands pointing at a television" fetchpriority="high" decoding="async"></picture><figcaption>One screen brings the room together.</figcaption></figure>
@@ -341,7 +341,7 @@ function setupPointing(): void {
 }
 
 function renderLegal(kind: 'Privacy' | 'Terms'): void {
-  const privacy = `<p><strong>Effective 27 August 2026</strong></p><p>Living Room Lobby is designed without accounts. A room stores a chosen display name, game actions, and scores in our database for up to six hours, then expires. We do not sell data, run advertising trackers, or create profiles.</p><h2>On your device</h2><p>A room session is held in session storage. A Family Pack license and its last verification result are held in local storage. You can clear either in your browser settings.</p><h2>Payments</h2><p>Checkout and license verification are handled by Sociobot and its merchant-of-record provider, Dodo. We receive only the license result needed to unlock the pack.</p><h2>Children</h2><p>No email, birth date, voice, photo, or precise location is requested. Adults should choose non-identifying nicknames for children.</p><h2>Questions</h2><p>Email privacy@sociobot.in.</p>`;
+  const privacy = `<p><strong>Effective 27 August 2026</strong></p><p>Living Room Lobby is designed without accounts. A room stores a chosen display name, game actions, and scores in our database for up to six hours, then expires. We do not sell data, run advertising trackers, or create profiles.</p><h2>Sample data</h2><p>A demo visit creates an isolated sample workspace that expires after 24 hours. Sample play never changes a real room.</p><h2>On your device</h2><p>A room session is held in session storage. A Family Pack license and its last verification result are held in local storage. You can clear either in your browser settings.</p><h2>Payments</h2><p>Checkout and license verification are handled by Sociobot and its merchant-of-record provider, Dodo. We receive only the license result needed to unlock the pack.</p><h2>Children</h2><p>No email, birth date, voice, photo, or precise location is requested. Adults should choose non-identifying nicknames for children.</p><h2>Questions</h2><p>Email privacy@sociobot.in.</p>`;
   const terms = `<p><strong>Effective 27 August 2026</strong></p><p>Living Room Lobby provides casual local party games as-is. Use it lawfully and supervise young players around screens and devices.</p><h2>Family Pack</h2><p>The $12 Family Pack is a one-time license for the listed extra games. Sociobot/Dodo is the merchant of record and handles checkout and refunds. Refunded, revoked, or invalid licenses stop unlocking paid games. Core games remain free.</p><h2>Fair play</h2><p>Do not disrupt rooms, automate requests, probe other room codes, or upload harmful content. Rooms and display names are temporary.</p><h2>Availability</h2><p>TV browsers vary. We aim for broad compatibility but cannot promise every browser or network will work without interruption.</p><h2>Contact</h2><p>Email support@sociobot.in.</p>`;
   shell(`<article class="legal"><p class="eyebrow">The plain-language version</p><h1>${kind}</h1>${kind === 'Privacy' ? privacy : terms}<a class="button secondary" href="/" data-nav>Back to the lobby</a></article>`, 'legal');
 }

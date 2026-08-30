@@ -9,7 +9,9 @@ that expires in 24 hours. It does not use the real `rooms` table. The host can
 move to the other shipped games; Pass & Guess includes a shared-phone sample
 session for browser tests.
 
-Demo state is browser-local only:
+Interactive demo state is browser-local. Initial provisioning also creates an
+isolated server-side sample workspace that expires after 24 hours. It never
+reads or writes the real `rooms` table:
 
 - `localStorage`: `demo:living-room-lobby:room`
 - `sessionStorage`: `demo:living-room-lobby:session`

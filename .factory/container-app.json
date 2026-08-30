@@ -1,0 +1,8 @@
+{
+  "kind": "container",
+  "dockerfile": "Dockerfile",
+  "port": 8080,
+  "minReplicas": 1,
+  "maxReplicas": 1,
+  "reason": "Rooms and rate-limit buckets use the container's local SQLite store and memory. This product must stay on one replica until those stores are replaced with shared services."
+}

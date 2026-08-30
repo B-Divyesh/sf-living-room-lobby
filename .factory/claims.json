@@ -7,6 +7,13 @@
     "sandbox": "Fresh desktop browser context; click the landing action, assert the 24-hour seeded workspace and demo: storage namespace, reset it, then start for real and assert demo storage is discarded."
   },
   {
+    "id": "demo-real-room-isolation",
+    "claim": "Sample play never changes a real room.",
+    "where": "landing first-screen facts, demo documentation, README",
+    "test": "npm run test:browser -- --grep @claim:demo-real-room-isolation",
+    "sandbox": "Fresh desktop browser context; exercise the seeded sample and assert its requests never use /api/rooms. Rust integration coverage also queries the database after POST /api/demo and proves real rooms remain empty."
+  },
+  {
     "id": "offline-reload",
     "claim": "The sample room keeps working offline after the first visit.",
     "where": "demo banner and README",

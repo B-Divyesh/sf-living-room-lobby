@@ -23,17 +23,44 @@ use tracing::info;
 use rooms::AppState;
 
 fn app(state: AppState, static_dir: &str) -> Router {
-    let index = Path::new(static_dir).join("index.html");
+    let root = Path::new(static_dir);
+    let index = root.join("index.html");
     Router::new()
         .route("/", get_service(ServeFile::new(index.clone())))
         .route("/demo", get_service(ServeFile::new(index.clone())))
         .route("/privacy", get_service(ServeFile::new(index.clone())))
         .route("/terms", get_service(ServeFile::new(index)))
         .route("/404", get(not_found_page))
+        .route("/404.html", get(not_found_page))
         .route("/health", get(health))
+        // Keep the static surface deliberately explicit.  ServeDir used as a
+        // router fallback returns its own empty 404 for a missing page, which
+        // bypasses the accessible recovery page below.
+        .nest_service("/assets", ServeDir::new(root.join("assets")))
+        .route("/sw.js", get_service(ServeFile::new(root.join("sw.js"))))
+        .route(
+            "/manifest.webmanifest",
+            get_service(ServeFile::new(root.join("manifest.webmanifest"))),
+        )
+        .route(
+            "/robots.txt",
+            get_service(ServeFile::new(root.join("robots.txt"))),
+        )
+        .route(
+            "/sitemap.xml",
+            get_service(ServeFile::new(root.join("sitemap.xml"))),
+        )
+        .route(
+            "/favicon.svg",
+            get_service(ServeFile::new(root.join("favicon.svg"))),
+        )
+        .route(
+            "/apple-touch-icon.png",
+            get_service(ServeFile::new(root.join("apple-touch-icon.png"))),
+        )
         .nest("/api/demo", rooms::demo_router(state.clone()))
         .nest("/api/rooms", rooms::router(state.clone()))
-        .fallback_service(ServeDir::new(static_dir))
+        .fallback(not_found_page)
         .with_state(state)
         .layer(SetResponseHeaderLayer::if_not_present(
             header::X_CONTENT_TYPE_OPTIONS,
@@ -246,7 +273,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn not_found_route_is_a_styled_404_not_the_application_shell() {
+    async fn unknown_routes_use_the_styled_404_recovery_page() {
         let response = test_app()
             .await
             .oneshot(Request::builder().uri("/404").body(Body::empty()).unwrap())
@@ -261,12 +288,37 @@ mod tests {
         assert!(std::str::from_utf8(&body)
             .unwrap()
             .contains("That page is not here."));
+
+        let unknown = test_app()
+            .await
+            .oneshot(
+                Request::builder()
+                    .uri("/this-does-not-exist")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(unknown.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            unknown.headers()[header::CACHE_CONTROL],
+            "no-cache, must-revalidate"
+        );
+        let unknown_body = unknown.into_body().collect().await.unwrap().to_bytes();
+        let page = std::str::from_utf8(&unknown_body).unwrap();
+        assert!(page.contains("That page is not here."));
+        assert!(page.contains("Go to Living Room Lobby"));
     }
 
     #[tokio::test]
     async fn demo_route_seeds_an_isolated_twenty_four_hour_workspace() {
-        let response = test_app()
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
             .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        let response = app(AppState::new(pool.clone()), "dist")
             .oneshot(
                 Request::builder()
                     .method("POST")
@@ -284,6 +336,19 @@ mod tests {
         assert_eq!(workspace["room"]["code"], "DEMO");
         assert_eq!(workspace["room"]["players"].as_array().unwrap().len(), 3);
         assert_eq!(workspace["workspace"].as_str().unwrap().len(), 24);
+        let real_room_count: i64 = sqlx::query_scalar("SELECT count(*) FROM rooms")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let demo_workspace_count: i64 = sqlx::query_scalar("SELECT count(*) FROM demo_workspaces")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            real_room_count, 0,
+            "demo provisioning must not create a real room"
+        );
+        assert_eq!(demo_workspace_count, 1);
     }
 
     #[test]

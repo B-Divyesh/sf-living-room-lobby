@@ -14,6 +14,10 @@ describe('release identity and offline updates', () => {
 
   it('defaults Docker builds without git metadata and consumes a supplied SHA in every stage', () => {
     const dockerfile = readFileSync(repositoryFile('Dockerfile'), 'utf8');
+    const deployment = JSON.parse(readFileSync(repositoryFile('.factory/container-app.json'), 'utf8')) as {
+      kind: string; dockerfile: string; port: number; minReplicas: number; maxReplicas: number;
+    };
+    const deployScript = readFileSync(repositoryFile('scripts/deploy-container.sh'), 'utf8');
     const serviceWorker = readFileSync(repositoryFile('frontend/public/sw.js'), 'utf8');
     expect(dockerfile).toMatch(/^ARG BUILD_SHA=dev$/m);
     expect(dockerfile).toContain('FROM rust:1-slim AS backend');
@@ -36,5 +40,10 @@ describe('release identity and offline updates', () => {
     expect(serviceWorker).toContain("event.request.mode === 'navigate'");
     expect(serviceWorker).not.toContain("response || caches.match('/')");
     expect(serviceWorker).toContain("new Response('', { status: 504, statusText: 'Offline' })");
+    expect(deployment).toMatchObject({ kind: 'container', dockerfile: 'Dockerfile', port: 8080, minReplicas: 1, maxReplicas: 1 });
+    expect(deployScript).toContain('az containerapp update');
+    expect(deployScript).toContain('--set-env-vars "PORT=$port"');
+    expect(deployScript).toContain('--min-replicas 1 --max-replicas 1');
+    expect(deployScript).toContain('"--validate-only"');
   });
 });

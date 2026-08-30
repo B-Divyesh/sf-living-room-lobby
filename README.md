@@ -57,6 +57,12 @@ user and starts with only `PORT` configured. `BUILD_SHA` defaults to `dev` for
 plain local builds; the factory supplies the full immutable commit SHA during
 its tarball build, and the compiled `/health` response identifies that release.
 
+For the factory deployment, run `./scripts/deploy-container.sh` from a clean,
+committed checkout with Azure access. Its checked-in
+`.factory/container-app.json` deliberately fixes both replica counts at one:
+room state and per-client limits use local SQLite and process memory. Do not
+scale this deployment until those stores are replaced by shared services.
+
 ## Testing and accessibility
 
 `npm test` runs prompt/catalogue tests and Rust API room-flow tests. `npm run

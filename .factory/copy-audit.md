@@ -14,7 +14,7 @@ banned plain-words term.
 | Join a room | 3 | pass |
 | See a ready Draw Together round with three sample families. | 10 | pass |
 | Try the sample without an account. | 6 | pass |
-| Sample play stays in this browser. | 6 | pass |
+| Sample play never changes a real room. | 7 | pass |
 | Extra games cost $12 once. | 5 | pass |
 | Use a TV remote to move and choose. | 9 | pass |
 | One screen brings the room together. | 6 | pass |

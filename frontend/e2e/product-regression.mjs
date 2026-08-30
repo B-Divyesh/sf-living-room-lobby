@@ -78,6 +78,8 @@ async function checkDesktopAndPrivacy(browser) {
 async function checkDemoSandbox(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
+  const requests = [];
+  page.on('request', (request) => requests.push(new URL(request.url()).pathname));
   try {
     await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
     const workspaceResponse = page.waitForResponse((response) => response.url() === `${baseUrl}/api/demo` && response.request().method() === 'POST');
@@ -103,6 +105,43 @@ async function checkDemoSandbox(browser) {
     const afterStart = await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage) }));
     assert.ok(!afterStart.local.some((key) => key.startsWith('demo:')), 'Start for real left demo data in localStorage.');
     assert.ok(!afterStart.session.some((key) => key.startsWith('demo:')), 'Start for real left demo data in sessionStorage.');
+    assert.ok(!requests.some((path) => path.startsWith('/api/rooms')), `Sample mode touched a real room route: ${requests.join(', ')}`);
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkDemoRealRoomIsolation(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const apiPaths = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.origin === baseUrl && url.pathname.startsWith('/api/')) apiPaths.push(url.pathname);
+  });
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.locator('#end-game').click();
+    await page.locator('[data-game="point"]').click();
+    await page.locator('.point-arena').waitFor();
+    await page.locator('#end-game').click();
+    await page.locator('#reset-demo').click();
+    assert.ok(apiPaths.includes('/api/demo'), 'Sample mode did not provision its isolated workspace.');
+    assert.ok(!apiPaths.some((path) => path.startsWith('/api/rooms')), `Sample mode touched a real room route: ${apiPaths.join(', ')}`);
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkDesignedNotFound(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  try {
+    const response = await page.goto(`${baseUrl}/this-does-not-exist`, { waitUntil: 'domcontentloaded' });
+    assert.equal(response?.status(), 404);
+    await page.getByRole('heading', { name: 'That page is not here.' }).waitFor();
+    await page.getByRole('link', { name: 'Go to Living Room Lobby' }).waitFor();
+    assert.equal(await page.locator('main').count(), 1);
   } finally {
     await context.close();
   }
@@ -222,6 +261,17 @@ async function checkSharedRoomReads() {
   assert.ok(rooms.every((entry) => entry.room.code === payload.code), 'A room read returned another room.');
 }
 
+async function checkRoomCreationLimit() {
+  const client = '198.51.100.78';
+  for (let count = 0; count < 12; count += 1) {
+    const response = await fetch(`${baseUrl}/api/rooms`, { method: 'POST', headers: { 'x-forwarded-for': client } });
+    assert.equal(response.status, 200, `Room creation ${count + 1} was unexpectedly limited.`);
+  }
+  const limited = await fetch(`${baseUrl}/api/rooms`, { method: 'POST', headers: { 'x-forwarded-for': client } });
+  assert.equal(limited.status, 429, 'The thirteenth room creation must be limited.');
+  assert.equal(limited.headers.get('retry-after'), '60');
+}
+
 async function checkRemoteControls(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
@@ -325,9 +375,12 @@ try {
   try {
     if (included('@claim:same-origin-requests') || !grep) await checkDesktopAndPrivacy(browser);
     if (included('@claim:demo-sandbox') || !grep) await checkDemoSandbox(browser);
+    if (included('@claim:demo-real-room-isolation') || !grep) await checkDemoRealRoomIsolation(browser);
     if (included('@regression:mobile-a11y') || !grep) await checkMobileCatalogueAndPointA11y(browser);
     if (included('@regression:core-room-flow') || !grep) await checkCoreRoomFlow(browser);
     if (included('@regression:shared-room-store') || !grep) await checkSharedRoomReads();
+    if (included('@regression:room-create-limit') || !grep) await checkRoomCreationLimit();
+    if (included('@regression:styled-404') || !grep) await checkDesignedNotFound(browser);
     if (included('@claim:remote-controls') || !grep) await checkRemoteControls(browser);
     if (included('@claim:shared-phone') || !grep) await checkSharedPhoneDemo(browser);
     if (included('@claim:family-pack-price') || !grep) await checkFamilyPackPrice(browser);
