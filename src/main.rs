@@ -206,7 +206,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => (8080, "default"),
     };
     let address = SocketAddr::from(([0, 0, 0, 0], port));
-    info!(database_url_source, data_dir_source, port_source, "runtime configuration");
+    info!(
+        database_url_source,
+        data_dir_source, port_source, "runtime configuration"
+    );
     let listener = tokio::net::TcpListener::bind(address).await?;
     info!(%address, "living room lobby listening");
 
@@ -396,10 +399,8 @@ mod tests {
 
     #[test]
     fn default_database_uses_data_mount_before_local_fallback() {
-        let root = std::env::temp_dir().join(format!(
-            "living-room-lobby-storage-{}",
-            std::process::id()
-        ));
+        let root =
+            std::env::temp_dir().join(format!("living-room-lobby-storage-{}", std::process::id()));
         let mounted_data = root.join("mounted-data");
         let fallback = root.join("fallback-data");
         std::fs::create_dir_all(&mounted_data).unwrap();
@@ -407,9 +408,13 @@ mod tests {
         let (mounted_path, mounted_source) = default_database_path(&mounted_data, &fallback);
         assert_eq!(mounted_path, mounted_data.join("lobby.db"));
         assert_eq!(mounted_source, "durable-data-mount");
-        assert_eq!(sqlite_url(&mounted_path), format!("sqlite://{}?mode=rwc", mounted_path.display()));
+        assert_eq!(
+            sqlite_url(&mounted_path),
+            format!("sqlite://{}?mode=rwc", mounted_path.display())
+        );
 
-        let (fallback_path, fallback_source) = default_database_path(&root.join("absent"), &fallback);
+        let (fallback_path, fallback_source) =
+            default_database_path(&root.join("absent"), &fallback);
         assert_eq!(fallback_path, fallback.join("lobby.db"));
         assert_eq!(fallback_source, "local-fallback");
         std::fs::remove_dir_all(root).unwrap();

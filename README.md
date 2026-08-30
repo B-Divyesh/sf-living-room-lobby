@@ -24,7 +24,7 @@ payment-provider code or product IDs.
 - Vite + strict TypeScript, with no UI framework or hosted assets
 - Rust 2021, Axum, and SQLite via SQLx
 - HTTP polling for old WebKit/Chromium TV browsers
-- Local room sessions and no player profiles
+- Room state and server-side rate-limit buckets in SQLite at `/data/lobby.db`
 - One container serves the compiled frontend and API on `PORT`
 
 ## Develop
@@ -41,15 +41,16 @@ npm run test:browser  # production-browser, keyboard, Axe, offline, and privacy 
 npm run build        # reproducible frontend output in dist/
 ```
 
-The server defaults to `sqlite://data/lobby.db?mode=rwc`. Override with
-`DATABASE_URL`; set `PORT` to change the default `8080`. Set
+The server defaults to `sqlite:///data/lobby.db?mode=rwc` when `/data` exists,
+falling back to `sqlite://data/lobby.db?mode=rwc` for a standalone binary.
+Override with `DATABASE_URL`; set `PORT` to change the default `8080`. Set
 `VITE_BILLING_BASE` only when building for the factory’s staging billing API.
 
 ## Container
 
 ```sh
 docker build --build-arg BUILD_SHA="$(git rev-parse HEAD)" -t living-room-lobby .
-docker run --rm -p 8080:8080 -v lobby-data:/app/data living-room-lobby
+docker run --rm -p 8080:8080 -v lobby-data:/data living-room-lobby
 ```
 
 Open `http://localhost:8080`. The production image runs as an unprivileged
@@ -59,9 +60,10 @@ its tarball build, and the compiled `/health` response identifies that release.
 
 For the factory deployment, run `./scripts/deploy-container.sh` from a clean,
 committed checkout with Azure access. Its checked-in
-`.factory/container-app.json` deliberately fixes both replica counts at one:
-room state and per-client limits use local SQLite and process memory. Do not
-scale this deployment until those stores are replaced by shared services.
+`.factory/container-app.json` requires the durable `/data` mount and fixes both
+replica counts at one. Room state and per-client limits use the SQLite file at
+that path. Do not scale this deployment until those stores are replaced by
+shared services.
 
 ## Testing and accessibility
 

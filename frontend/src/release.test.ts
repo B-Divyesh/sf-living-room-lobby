@@ -15,7 +15,7 @@ describe('release identity and offline updates', () => {
   it('defaults Docker builds without git metadata and consumes a supplied SHA in every stage', () => {
     const dockerfile = readFileSync(repositoryFile('Dockerfile'), 'utf8');
     const deployment = JSON.parse(readFileSync(repositoryFile('.factory/container-app.json'), 'utf8')) as {
-      kind: string; dockerfile: string; port: number; minReplicas: number; maxReplicas: number;
+      kind: string; dockerfile: string; port: number; dataDir: string; minReplicas: number; maxReplicas: number;
     };
     const deployScript = readFileSync(repositoryFile('scripts/deploy-container.sh'), 'utf8');
     const serviceWorker = readFileSync(repositoryFile('frontend/public/sw.js'), 'utf8');
@@ -28,6 +28,8 @@ describe('release identity and offline updates', () => {
     expect(dockerfile).toContain('COPY frontend/public/404.html ./frontend/public/404.html');
     expect(dockerfile).toContain('LABEL org.opencontainers.image.revision=${BUILD_SHA}');
     expect(dockerfile).toContain('ENV PORT=8080');
+    expect(dockerfile).toContain('mkdir -p /app/data /data');
+    expect(dockerfile).toContain('chown -R lobby:lobby /app /data');
     expect(dockerfile).not.toContain('ENV BUILD_SHA=');
     expect(dockerfile).not.toContain('DATABASE_URL=');
     expect(dockerfile).not.toMatch(/(?:COPY|ADD)\s+\.git\b/);
@@ -40,10 +42,12 @@ describe('release identity and offline updates', () => {
     expect(serviceWorker).toContain("event.request.mode === 'navigate'");
     expect(serviceWorker).not.toContain("response || caches.match('/')");
     expect(serviceWorker).toContain("new Response('', { status: 504, statusText: 'Offline' })");
-    expect(deployment).toMatchObject({ kind: 'container', dockerfile: 'Dockerfile', port: 8080, minReplicas: 1, maxReplicas: 1 });
+    expect(deployment).toMatchObject({ kind: 'container', dockerfile: 'Dockerfile', port: 8080, dataDir: '/data', minReplicas: 1, maxReplicas: 1 });
     expect(deployScript).toContain('az containerapp update');
     expect(deployScript).toContain('--set-env-vars "PORT=$port"');
     expect(deployScript).toContain('--min-replicas 1 --max-replicas 1');
+    expect(deployScript).toContain('properties.template.scale.minReplicas');
+    expect(deployScript).toContain('dataDir');
     expect(deployScript).toContain('"--validate-only"');
   });
 });

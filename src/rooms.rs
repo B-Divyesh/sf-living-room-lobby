@@ -270,7 +270,10 @@ pub fn demo_router(state: AppState) -> Router<AppState> {
 }
 
 async fn api_rate_limit(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    match state.allow_api_request(&client_key(request.headers())).await {
+    match state
+        .allow_api_request(&client_key(request.headers()))
+        .await
+    {
         Ok(true) => next.run(request).await,
         Ok(false) => ApiError::too_many_requests().into_response(),
         Err(_) => ApiError::internal("The lobby is having trouble. Try again.").into_response(),
@@ -897,6 +900,175 @@ mod tests {
                 .unwrap();
             assert_eq!(response.status(), StatusCode::OK);
         }
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[tokio::test]
+    async fn host_and_phone_share_durable_room_state_between_app_instances() {
+        // This reproduces the production boundary: the host and phone can be
+        // routed to independently constructed application instances. They
+        // must still see one room because both use the durable SQLite file.
+        let path =
+            std::env::temp_dir().join(format!("living-room-lobby-host-phone-{}.db", random_id(12)));
+        let database_url = format!("sqlite://{}?mode=rwc", path.display());
+        let host_pool = SqlitePool::connect(&database_url).await.unwrap();
+        sqlx::migrate!().run(&host_pool).await.unwrap();
+        let phone_pool = SqlitePool::connect(&database_url).await.unwrap();
+        let host_state = AppState::new(host_pool);
+        let phone_state = AppState::new(phone_pool);
+        let host = router(host_state.clone()).with_state(host_state);
+        let phone = router(phone_state.clone()).with_state(phone_state);
+
+        let created = host
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/")
+                    .header("x-forwarded-for", "203.0.113.211")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(created.status(), StatusCode::OK);
+        let created: Value =
+            serde_json::from_slice(&created.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        let code = created["code"].as_str().unwrap();
+        let host_token = created["hostToken"].as_str().unwrap();
+
+        // The verifier caught exactly this step returning a mixed 200/404
+        // result. Alternate requests between the host and phone instances so
+        // a local process cache can never conceal a split durable store.
+        for attempt in 0..20 {
+            let service = if attempt % 2 == 0 {
+                host.clone()
+            } else {
+                phone.clone()
+            };
+            let client = if attempt % 2 == 0 {
+                "203.0.113.212"
+            } else {
+                "203.0.113.213"
+            };
+            let response = service
+                .oneshot(
+                    Request::builder()
+                        .uri(format!("/{code}"))
+                        .header("cache-control", "no-store")
+                        .header("x-forwarded-for", client)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                StatusCode::OK,
+                "room read {attempt} was split"
+            );
+        }
+
+        let joined = phone
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/{code}/join"))
+                    .header("content-type", "application/json")
+                    .header("x-forwarded-for", "203.0.113.213")
+                    .body(Body::from(r#"{"name":"Shared family","mode":"shared"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(joined.status(), StatusCode::OK);
+        let joined: Value =
+            serde_json::from_slice(&joined.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        let player_token = joined["token"].as_str().unwrap();
+
+        let started = host
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/{code}/host"))
+                    .header("content-type", "application/json")
+                    .header("x-forwarded-for", "203.0.113.211")
+                    .body(Body::from(
+                        json!({
+                            "token": host_token,
+                            "stage": "playing",
+                            "game": "draw",
+                            "prompt": "CAKE",
+                            "resetRound": true
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(started.status(), StatusCode::OK);
+
+        let drew = phone
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/{code}/action"))
+                    .header("content-type", "application/json")
+                    .header("x-forwarded-for", "203.0.113.213")
+                    .body(Body::from(
+                        json!({
+                            "token": player_token,
+                            "kind": "draw",
+                            "points": [
+                                { "x": 20, "y": 30, "color": "", "start": true },
+                                { "x": 40, "y": 50, "color": "", "start": false }
+                            ]
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(drew.status(), StatusCode::OK);
+
+        let visible_to_host = host
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/{code}"))
+                    .header("x-forwarded-for", "203.0.113.212")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(visible_to_host.status(), StatusCode::OK);
+        let visible_to_host: Value = serde_json::from_slice(
+            &visible_to_host
+                .into_body()
+                .collect()
+                .await
+                .unwrap()
+                .to_bytes(),
+        )
+        .unwrap();
+        assert_eq!(visible_to_host["room"]["stage"], "playing");
+        assert_eq!(visible_to_host["room"]["game"], "draw");
+        assert_eq!(
+            visible_to_host["room"]["players"][0]["name"],
+            "Shared family"
+        );
+        assert_eq!(
+            visible_to_host["room"]["drawing"].as_array().unwrap().len(),
+            2
+        );
 
         let _ = std::fs::remove_file(path);
     }

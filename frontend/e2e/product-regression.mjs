@@ -178,6 +178,22 @@ async function checkMobileCatalogueAndPointA11y(browser) {
   }
 }
 
+async function assertDurableRoomReads(host, phone, code) {
+  // The verifier's P0 saw a new room return both 200 and 404 as traffic hit
+  // different replicas. Read through the independent TV and phone contexts
+  // before the phone joins; all reads must resolve the host's exact room.
+  const reads = await Promise.all(Array.from({ length: 20 }, async (_, attempt) => {
+    const page = attempt % 2 === 0 ? host : phone;
+    return page.evaluate(async (roomCode) => {
+      const response = await fetch(`/api/rooms/${roomCode}`, { cache: 'no-store' });
+      const body = await response.json().catch(() => ({}));
+      return { status: response.status, code: body.room?.code };
+    }, code);
+  }));
+  assert.deepEqual(reads.map((read) => read.status), Array(20).fill(200), 'Every host/phone room read must be 200.');
+  assert.ok(reads.every((read) => read.code === code), 'A durable room read did not return the host room.');
+}
+
 async function checkCoreRoomFlow(browser) {
   const hostContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const phoneContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -196,6 +212,7 @@ async function checkCoreRoomFlow(browser) {
     assert.ok(code, `Could not read the room code from ${roomHeading}`);
 
     await phone.goto(`${baseUrl}/?join=${code}`, { waitUntil: 'networkidle' });
+    await assertDurableRoomReads(host, phone, code);
     await phone.locator('#player-name').fill('QA Family');
     await phone.locator('input[value="shared"]').check();
     await phone.locator('#join-form button[type="submit"]').click();
@@ -270,6 +287,20 @@ async function checkRoomCreationLimit() {
   const limited = await fetch(`${baseUrl}/api/rooms`, { method: 'POST', headers: { 'x-forwarded-for': client } });
   assert.equal(limited.status, 429, 'The thirteenth room creation must be limited.');
   assert.equal(limited.headers.get('retry-after'), '60');
+}
+
+async function checkDemoApiLimit() {
+  // Verification 5 sent 100 concurrent demo provisions through one client and
+  // received no 429. The first 40 may pass; request 41 must be told to wait.
+  const client = '198.51.100.79';
+  const responses = await Promise.all(Array.from({ length: 41 }, () => fetch(`${baseUrl}/api/demo`, {
+    method: 'POST', headers: { 'x-forwarded-for': client },
+  })));
+  const allowed = responses.filter((response) => response.status === 200);
+  const limited = responses.filter((response) => response.status === 429);
+  assert.equal(allowed.length, 40, 'Exactly 40 demo requests per second may pass for one client.');
+  assert.equal(limited.length, 1, 'The 41st concurrent demo request must be rate limited.');
+  assert.equal(limited[0].headers.get('retry-after'), '1');
 }
 
 async function checkRemoteControls(browser) {
@@ -380,6 +411,7 @@ try {
     if (included('@regression:core-room-flow') || !grep) await checkCoreRoomFlow(browser);
     if (included('@regression:shared-room-store') || !grep) await checkSharedRoomReads();
     if (included('@regression:room-create-limit') || !grep) await checkRoomCreationLimit();
+    if (included('@regression:api-rate-limit') || !grep) await checkDemoApiLimit();
     if (included('@regression:styled-404') || !grep) await checkDesignedNotFound(browser);
     if (included('@claim:remote-controls') || !grep) await checkRemoteControls(browser);
     if (included('@claim:shared-phone') || !grep) await checkSharedPhoneDemo(browser);

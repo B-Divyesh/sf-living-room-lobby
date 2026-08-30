@@ -2,7 +2,8 @@
   "kind": "container",
   "dockerfile": "Dockerfile",
   "port": 8080,
+  "dataDir": "/data",
   "minReplicas": 1,
   "maxReplicas": 1,
-  "reason": "Rooms and rate-limit buckets use the container's local SQLite store and memory. This product must stay on one replica until those stores are replaced with shared services."
+  "reason": "Rooms and rate-limit buckets are stored in SQLite at /data/lobby.db. The factory mounts the durable product data share at /data. This product must stay on exactly one replica until room storage and rate limits use a shared service."
 }

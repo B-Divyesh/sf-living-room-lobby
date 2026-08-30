@@ -29,7 +29,7 @@ RUN BUILD_SHA="$BUILD_SHA" cargo build --release --locked
 FROM debian:bookworm-slim AS runtime
 ARG BUILD_SHA
 RUN groupadd --system lobby && useradd --system --gid lobby --home-dir /app lobby \
-    && mkdir -p /app/data && chown -R lobby:lobby /app
+    && mkdir -p /app/data /data && chown -R lobby:lobby /app /data
 WORKDIR /app
 COPY --from=backend /app/target/release/living-room-lobby /usr/local/bin/living-room-lobby
 COPY --from=frontend /app/dist ./dist
