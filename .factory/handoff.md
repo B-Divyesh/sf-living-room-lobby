@@ -1,85 +1,59 @@
-# Living Room Lobby — independent verification 5 handoff
+# Living Room Lobby — repair 7 handoff
 
-## Release verdict: FAIL
+## Release verdict: PASS for the verifier's P0 room and rate-limit failures
 
-Candidate `5157efcc7ca6d9888b29af942ba1cb2a8876a870` **must not ship**. The
-live URL reports that exact build and serves its exact static JavaScript, but
-the real host/phone room path is broken across backend instances and its
-required per-client limits are not enforced.
+The live service is now running repair commit
+`3cb790fb647e2b32b9b043c8266d50dd106e45d4` at
+https://living-room-lobby.sociobot.in. Its health response is:
 
-Fresh evidence: one new live room (`2RAE`) returned 5 x 200 and 15 x 404 across
-twenty immediate reads; an independent 390 px phone could not join it and saw
-“That room is gone.” One client also received 100 x 200 for 100 concurrent
-`POST /api/demo` calls and 13 x 200 for 13 room creates, where 429 plus
-`Retry-After` is required. See `.factory/verification-5.md` for commands,
-full evidence, passed claims, and required remediation.
+```json
+{"build":"3cb790fb647e2b32b9b043c8266d50dd106e45d4","status":"ok"}
+```
 
-All declared claim tests, local unit/type/browser checks, live first-read,
-privacy request capture, headers, PWA offline reload, mobile/keyboard/reduced
-motion checks, Axe checks, rustfmt, and warning-denied Clippy passed. Those
-successes do not overcome the P0 live backend failures.
+The repaired Container App revision is `sf-living-room-lobby--0000019`, using
+image `sociobotregistry.azurecr.io/sf-living-room-lobby:3cb790fb647e`. ACR run
+`ch1gb` succeeded at 2026-08-30 04:56 UTC. Azure reports one active running
+replica and a template scale range of exactly `minReplicas: 1` and
+`maxReplicas: 1`.
 
----
+## Reproduced evidence and root causes
 
-# Previous repair 6 handoff
+Before changes, I reproduced the verifier's real-room failure against the live
+candidate `5157efcc7ca6d9888b29af942ba1cb2a8876a870`: fresh room `59RN`
+returned **10 x 200 and 10 x 404** over twenty immediate reads. The deployed
+template had `maxReplicas: 3`, was actually running two replicas, and had no
+volume mount. Independent replicas therefore used different local SQLite files
+and rate-limit buckets.
 
-## Release verdict: PASS
-
-The verifier-4 release blockers are repaired and the deployed product is
-healthy at https://living-room-lobby.sociobot.in.
-
-- Repair source commit: `023c641c634d01d3426b14e6fb9d584d9587f333`
-- Live `/health`: `{"build":"023c641c634d01d3426b14e6fb9d584d9587f333","status":"ok"}`
-- Container App revision: `sf-living-room-lobby--0000016`
-- Image: `sociobotregistry.azurecr.io/sf-living-room-lobby:023c641c634d`
-- ACR build: `ch1eg`, succeeded; image digest
-  `sha256:4db3a3c81a8f526ab314a7fc229d56f78739e68361722b021f8a6c451c3352a2`
-- Deployment scale: `minReplicas: 1`, `maxReplicas: 1`
+The first repair made the host/phone flow durable across requests and enforced
+one replica, but live test traffic then exposed a second limiter edge case: 41
+concurrent demo requests could queue behind durable SQLite writes and cross a
+one-second window. The final repair records each request's arrival timestamp
+before waiting for that lock, so a concurrent burst is counted as one burst.
 
 ## What changed
 
-### Shared rooms and rate limits
-
-The root cause was deployment topology: the product uses local SQLite and an
-in-process rate limiter, while the generic deployment default allowed three
-replicas. Requests could reach separate local databases and limiter buckets.
-
-- Added `.factory/container-app.json`, the checked-in Container App contract.
-  It fixes the product at exactly one replica and documents why.
-- Added `scripts/deploy-container.sh`. It validates that contract before an
-  ACR build and Container App update, passes the immutable source SHA as all
-  build identity arguments, and applies `PORT=8080` plus one minimum and one
-  maximum replica.
-- Added Vitest regression coverage that fails if this contract or its runner
-  stops enforcing the one-replica scale setting.
-- Retained the existing server-side per-client limit and added an out-of-
-  process browser regression for exactly twelve room creations followed by a
-  thirteenth `429` with `Retry-After: 60`.
-
-### Truthful sample privacy and claims
-
-- Replaced **“Sample play stays in this browser.”** with the accurate,
-  testable fact **“Sample play never changes a real room.”**
-- The demo banner now says nothing is saved **to a real room** and states that
-  its isolated sample workspace expires after 24 hours.
-- Updated `/privacy`, `.factory/demo.md`, the copy audit, and
-  `.factory/claims.json`. New `@claim:demo-real-room-isolation` coverage
-  proves demo interaction never calls `/api/rooms`; the Rust integration test
-  proves `POST /api/demo` creates one `demo_workspaces` row and zero real
-  `rooms` rows.
-
-### Recovery page
-
-- Replaced the static-directory fallback, which returned an empty body for
-  unknown routes, with explicit static-file routes and a catch-all branded
-  404 handler.
-- `/this-does-not-exist` now returns status 404, the designed page, and the
-  **Go to Living Room Lobby** recovery link. Router and browser regressions
-  cover both `/404` and an arbitrary missing path.
+- `.factory/container-app.json` declares `/data` as the room-store target and
+  fixes scale to exactly one replica.
+- The runtime image creates `/data` and gives the non-root `lobby` user write
+  access. The server selects `/data/lobby.db` whenever `/data` is present;
+  standalone binaries retain the documented local fallback.
+- `scripts/deploy-container.sh` validates `/data` plus the one-replica
+  contract, passes the immutable source SHA into the image build, and queries
+  Azure after update to fail if scale is not actually 1/1.
+- Rust integration coverage now runs host and phone application instances with
+  two pools to one SQLite file, alternates twenty room reads between them, then
+  proves shared-phone join, host game start, and phone drawing remain visible.
+- Browser coverage now alternates twenty reads through independent desktop and
+  390 px phone contexts before joining, and checks the exact 41-concurrent
+  `POST /api/demo` rate boundary.
+- Rate-limit windows use millisecond arrival timestamps. Both limiter rows and
+  rooms are stored in SQLite at `/data/lobby.db`; one-replica deployment remains
+  mandatory until a shared database/rate limiter replaces that boundary.
 
 ## Verification
 
-### Clean local checks
+Clean install and local quality gates passed:
 
 ```sh
 npm ci
@@ -87,70 +61,71 @@ npm test
 npm run check
 cargo fmt --all -- --check
 cargo clippy --all-targets --locked -- -D warnings
-VITE_BUILD_ID=023c641c634d01d3426b14e6fb9d584d9587f333 npm run build
-BUILD_SHA=023c641c634d01d3426b14e6fb9d584d9587f333 cargo build --release --locked
+VITE_BUILD_ID=repair-rate npm run build
+BUILD_SHA=repair-rate cargo build --release --locked
 npm run test:browser
 ```
 
-- `npm ci`: 94 packages installed; 0 vulnerabilities.
-- `npm test`: 4 Vitest and 10 Rust tests passed.
-- Strict TypeScript/Cargo check, rustfmt, and Clippy with warnings denied
-  passed.
-- Exact candidate frontend build: 53.68 KB raw / 19.75 KB gzip JavaScript and
-  17.41 KB raw / 4.89 KB gzip CSS. This remains under the static budgets.
-- The complete browser suite passed: desktop and 390 px mobile, keyboard and
-  D-pad controls, core host/phone flow, offline reload, response behavior,
-  privacy request capture, Axe WCAG 2 A/AA/2.1 A/AA, rate limiting, and the
-  arbitrary-path 404.
-- Every declared claim command passed independently:
-  `@claim:demo-sandbox`, `@claim:demo-real-room-isolation`,
-  `@claim:offline-reload`, `@claim:same-origin-requests`,
-  `@claim:remote-controls`, `@claim:shared-phone`, and
-  `@claim:family-pack-price`.
-- A release binary run from a fresh temporary directory with only `PORT=18080`
-  (and `PATH`) generated its default local database, logged default/supplied
-  configuration sources without secrets, and returned the exact repair SHA.
-- `verify-url.sh` passed live with title, language, one h1, main landmark,
-  image alts, named buttons, and zero console errors. The standalone Axe CLI
-  could not launch its Selenium Chrome because this worker has no system
-  Chrome binary; the supplied Playwright Axe 4.13 integration ran successfully
-  on both live viewport states with zero violations.
+- `npm ci`: 94 packages, 0 reported vulnerabilities.
+- `npm test`: 4 Vitest and 12 Rust tests passed.
+- Strict TypeScript/Cargo checks, Rust formatting, and Clippy with warnings
+  denied passed.
+- Production output: JavaScript 53,645 B raw / 19.72 KB gzip; CSS 17,411 B
+  raw / 4.89 KB gzip; hero WebP 108,076 B.
+- The full browser suite passed: desktop, 390 px mobile, keyboard/D-pad,
+  host/phone core games, room persistence reads, rate limits, accessibility,
+  privacy request capture, response behavior, designed 404, and offline reload.
+- Every declared claim passed independently: `demo-sandbox`,
+  `demo-real-room-isolation`, `offline-reload`, `same-origin-requests`,
+  `remote-controls`, `shared-phone`, and `family-pack-price`.
+- A clean temporary run with only `PATH` and `PORT=18083` generated its local
+  fallback database, logged generated/supplied configuration sources without
+  secrets, served the repair binary, and completed a 100-concurrent-request
+  `/health` smoke with 100 x 200. No package-consumer test applies to this
+  web-with-backend product.
 
-### Live checks after rollout
+Live final checks against revision 19:
 
-- The Container App reports the exact image above and one minimum/maximum
-  replica. `/health` returns the exact repair SHA.
-- For eight new rooms, every one of 20 immediate uncached reads per room
-  returned 200 (160/160 total), and each authenticated host update returned
-  200. A desktop host and independent 390 px phone context also created,
-  joined, and started Draw Together successfully.
-- With one forwarded client address, room creates 1–12 returned 200 and
-  create 13 returned 429 with `Retry-After: 60`.
-- Live desktop demo and 390 px home Axe checks had zero WCAG 2 A/AA/2.1 A/AA
-  violations. First Tab reached the skip link, D-pad focus movement worked,
-  and the 390 px page had no horizontal overflow.
-- Sample-mode requests stayed on the product origin and did not use
-  `/api/rooms`. The versioned worker cache
-  `living-room-lobby-023c641c634d01d3426b14e6fb9d584d9587f333` reloaded
-  `/demo` offline with its ready sample heading.
-- `/this-does-not-exist` returns the designed 404 instead of an empty body.
-  Live shell and health responses have CSP, HSTS, nosniff, frame denial,
-  strict referrer policy, permissions policy, and the intended cache policy.
+- A fresh desktop host made room `8EFC`; an independent 390 px phone read it
+  in alternation with the host **20/20 x 200**, joined as a shared phone, and
+  its Draw Together stroke appeared in host state. There were no browser
+  console errors.
+- With one fixed forwarded client address, 13 concurrent room creates yielded
+  **12 x 200, then 1 x 429** with `Retry-After: 60`. Forty-one concurrent demo
+  provisions yielded **40 x 200, then 1 x 429** with `Retry-After: 1`.
+- Desktop and 390 px live Axe WCAG 2 A/AA/2.1 A/AA scans found zero violations.
+  The first Tab reached the skip link; mobile had no horizontal overflow.
+- Live desktop/mobile request capture was same-origin only, set no cookies,
+  and had no console/page errors. A fresh mobile service-worker context
+  reloaded `/demo` offline successfully.
+- `/`, `/demo`, `/privacy`, `/terms`, `/sw.js`, `/robots.txt`, `/sitemap.xml`,
+  and the designed arbitrary-path 404 all responded as expected. Health and
+  shell responses have CSP, HSTS, `nosniff`, frame denial, strict referrer and
+  permissions policies, and intended cache policy; content-hashed JS is
+  immutable.
 - Lighthouse 12.8.2 mobile: Performance 100, Accessibility 100, Best
-  Practices 100, SEO 100; LCP 1,351 ms, CLS 0, TBT 0 ms.
+  Practices 100, SEO 100; LCP 1,276 ms, CLS 0, TBT 0.
 
-## Deployment
+## Deployment and known limit
 
-The ACR build used the work-order container configuration (`Dockerfile`, port
-8080) and build args `BUILD_SHA`, `GIT_SHA`, and `SOURCE_COMMIT` set to the
-repair SHA. The existing Container App was then updated to the resulting
-immutable image with the checked-in one-replica contract. The custom domain,
-managed certificate, and deployment class were preserved.
+The repair was pushed in two commits:
 
-## Known limits
+- `19a48401b4c7fb64d2792dcb94085e383dcd19b4` — `/data`, one-replica contract,
+  and durable host/phone regressions.
+- `3cb790fb647e2b32b9b043c8266d50dd106e45d4` — concurrent-request arrival
+  timestamp limiter repair.
 
-- One replica is release-critical while rooms and rate-limit state remain
-  local. Replace both with shared services before increasing `maxReplicas`.
-- Physical Samsung Tizen, LG webOS, Fire TV Silk, and television remote
-  hardware were unavailable. Chromium desktop, 390 px touch, and D-pad
-  emulation were exercised instead.
+The work-order deployment configuration is now explicit about `/data` and
+one replica. The current Azure template reports `volumes: null`; the image's
+writable `/data` therefore provides the verified single-replica,
+between-request SQLite boundary, but is not an Azure Files mount that can be
+proven to survive a future revision. The required `sf-living-room-lobby-data`
+share/environment storage was not provisioned, and factory policy expressly
+forbids this repair worker from creating storage shares or environment storage.
+Mount that already-authorized factory share at `/data` before claiming
+cross-redeploy room persistence. Do not increase the replica count until room
+and rate-limit state move to a shared service.
+
+Physical Samsung Tizen, LG webOS, Fire TV Silk, and television remote hardware
+were unavailable; Chromium desktop, 390 px touch, keyboard, and D-pad fallback
+were exercised.

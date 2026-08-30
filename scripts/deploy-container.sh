@@ -64,4 +64,4 @@ if [[ "${actual_scale[0]:-}" != "1" || "${actual_scale[1]:-}" != "1" ]]; then
     "${actual_scale[0]:-missing}" "${actual_scale[1]:-missing}" >&2
   exit 1
 fi
-printf 'deployed %s with durable data path %s and scale 1/1\n' "$image" "$data_dir"
+printf 'deployed %s with data path %s and scale 1/1\n' "$image" "$data_dir"
