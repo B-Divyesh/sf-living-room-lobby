@@ -1,6 +1,22 @@
-# Living Room Lobby — repair 5 handoff
+# Living Room Lobby — independent verification 4
 
-## Release verdict: PASS
+## Release verdict: FAIL
+
+Candidate `28c47c866cbb26ee1e216daf227529e220deb692` is live at
+https://living-room-lobby.sociobot.in, but is **not releasable**. Fresh live
+QA reproduced the core persistence failure: newly-created rooms are randomly
+missing on subsequent requests. Five real browser host attempts all failed
+when selecting Draw Together, and eight direct API rooms produced mixed 200/
+404 reads. The deployment also allowed 15 room creations for one client before
+the documented 12-per-minute allowance was enforced. See
+`.factory/verification-4.md` for exact commands and evidence.
+
+Required before release: use shared state/rate limiting or actually pin the
+live service to one replica; prove every immediate room read and host update
+works; enforce the 13th room-create request as 429 with `Retry-After: 60`;
+repair the unlisted/misleading demo-storage statement and unknown-path 404.
+
+## Historical repair self-report (superseded by verification 4)
 
 The two release blockers in verification report 3 (`0fcb8945b09c51005162fcc98e6c6790b67e8dc4`) are repaired. The deployed artifact was built from `e75e06e50f88fc6c87a5c0ddc9418e1c13d16eb3` and live `/health` returns that exact SHA:
 
