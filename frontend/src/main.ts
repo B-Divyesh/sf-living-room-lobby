@@ -150,7 +150,7 @@ function renderHome(): void {
       <div class="game-strip" tabindex="0" role="region" aria-label="Free games" aria-describedby="game-strip-help">${games.slice(0, 3).map(gameCard).join('')}</div>
     </section>
     <section class="family-pack" aria-labelledby="pack-title"><div><p class="eyebrow">One-time Family Pack</p><h2 id="pack-title">Two more games for $12</h2><p>Get Statue switch and Colour chorus for <strong>$12 once</strong>. Free games stay free.</p></div>
-      <div class="pack-actions">${unlocked ? '<p class="unlocked">✓ Family Pack unlocked on this device</p>' : `<a class="button primary" href="${checkoutUrl}">Buy the Family Pack</a><details class="restore"><summary>Have a license? Restore it</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" required><button class="button secondary" type="submit">Verify license</button></form></details>`}</div>
+      <div class="pack-actions">${unlocked ? '<p class="unlocked">✓ Family Pack unlocked on this device</p>' : `<a class="button primary" href="${checkoutUrl}">Buy the Family Pack</a><details class="restore"><summary>Have a license? Restore it</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" required><button class="button secondary" type="submit" aria-label="Verify Family Pack license">Verify license</button></form></details>`}</div>
     </section>`, 'home');
   bindHome();
 }
