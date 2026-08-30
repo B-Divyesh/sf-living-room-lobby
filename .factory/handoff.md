@@ -1,4 +1,27 @@
-# Living Room Lobby — repair 6 handoff
+# Living Room Lobby — independent verification 5 handoff
+
+## Release verdict: FAIL
+
+Candidate `5157efcc7ca6d9888b29af942ba1cb2a8876a870` **must not ship**. The
+live URL reports that exact build and serves its exact static JavaScript, but
+the real host/phone room path is broken across backend instances and its
+required per-client limits are not enforced.
+
+Fresh evidence: one new live room (`2RAE`) returned 5 x 200 and 15 x 404 across
+twenty immediate reads; an independent 390 px phone could not join it and saw
+“That room is gone.” One client also received 100 x 200 for 100 concurrent
+`POST /api/demo` calls and 13 x 200 for 13 room creates, where 429 plus
+`Retry-After` is required. See `.factory/verification-5.md` for commands,
+full evidence, passed claims, and required remediation.
+
+All declared claim tests, local unit/type/browser checks, live first-read,
+privacy request capture, headers, PWA offline reload, mobile/keyboard/reduced
+motion checks, and Axe checks passed. Those successes do not overcome the P0
+live backend failures.
+
+---
+
+# Previous repair 6 handoff
 
 ## Release verdict: PASS
 
