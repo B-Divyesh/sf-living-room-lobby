@@ -178,6 +178,15 @@ fn sqlite_url(path: &Path) -> String {
     format!("sqlite://{}?mode=rwc", path.display())
 }
 
+fn sqlite_pool_options() -> SqlitePoolOptions {
+    // This is intentionally one connection: the product has one replica and
+    // serializes writes, while Azure Files can retain a SQLite read lock across
+    // otherwise-idle connections during first-time schema creation. Reusing
+    // the same connection for the schema check and migration avoids that
+    // self-contention and preserves the durable `/data` boundary.
+    SqlitePoolOptions::new().max_connections(1)
+}
+
 fn is_database_locked(error: &impl std::fmt::Display) -> bool {
     error
         .to_string()
@@ -275,10 +284,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options: SqliteConnectOptions = database_url
         .parse::<SqliteConnectOptions>()?
         .busy_timeout(Duration::from_secs(10));
-    let pool = SqlitePoolOptions::new()
-        .max_connections(8)
-        .connect_with(options)
-        .await?;
+    let pool = sqlite_pool_options().connect_with(options).await?;
     migrate_with_lock_retry(&pool, 30, Duration::from_secs(2)).await?;
 
     let state = AppState::new(pool);
@@ -499,6 +505,23 @@ mod tests {
         assert_eq!(fallback_path, fallback.join("lobby.db"));
         assert_eq!(fallback_source, "local-fallback");
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn startup_pool_keeps_one_sqlite_connection_for_the_durable_share() {
+        let pool = sqlite_pool_options()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let held = pool.acquire().await.unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(30), pool.acquire())
+                .await
+                .is_err(),
+            "a second connection would reintroduce Azure Files startup lock contention"
+        );
+        drop(held);
+        pool.close().await;
     }
 
     #[tokio::test]

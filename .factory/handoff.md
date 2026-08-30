@@ -25,6 +25,10 @@ while SQLx was issuing its no-op migration bookkeeping statement.
 - Startup now first reads the applied migration versions and checksums. A
   current schema starts without that bookkeeping write; actual new migrations
   retain a 10-second SQLite busy timeout and bounded lock retries.
+- The durable production pool uses one SQLite connection. The product is one
+  replica and already serializes writes; reusing that one connection prevents a
+  schema-read connection from holding an Azure Files lock while migration setup
+  needs to write.
 - `current_schema_starts_without_a_noop_migration_write` opens the current
   schema in SQLite `query_only` mode. It proves startup succeeds only because
   it does not try the no-op migration write. The existing locked-database
@@ -55,7 +59,7 @@ npm run test:browser
 ```
 
 - `npm ci`: 94 packages, 0 reported vulnerabilities.
-- `npm test`: 4 Vitest, 4 release-delivery Node tests, and 14 Rust unit and
+- `npm test`: 4 Vitest, 4 release-delivery Node tests, and 15 Rust unit and
   integration tests passed.
 - TypeScript, Cargo check, Rust formatting, and warning-denied Clippy passed.
 - Production frontend: JavaScript 53.64 KB raw / 19.72 KB gzip; CSS 17.41 KB
