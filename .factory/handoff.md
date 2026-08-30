@@ -29,6 +29,10 @@ while SQLx was issuing its no-op migration bookkeeping statement.
   replica and already serializes writes; reusing that one connection prevents a
   schema-read connection from holding an Azure Files lock while migration setup
   needs to write.
+- A cancelled first migration had left `/data/lobby.db` at zero bytes plus a
+  journal sidecar. Startup now moves only that invalid zero-byte database and
+  any SQLite sidecars into `/data/recovery/` before opening SQLite. It never
+  replaces a non-empty database, so valid room state remains untouched.
 - `current_schema_starts_without_a_noop_migration_write` opens the current
   schema in SQLite `query_only` mode. It proves startup succeeds only because
   it does not try the no-op migration write. The existing locked-database
@@ -59,7 +63,7 @@ npm run test:browser
 ```
 
 - `npm ci`: 94 packages, 0 reported vulnerabilities.
-- `npm test`: 4 Vitest, 4 release-delivery Node tests, and 15 Rust unit and
+- `npm test`: 4 Vitest, 4 release-delivery Node tests, and 16 Rust unit and
   integration tests passed.
 - TypeScript, Cargo check, Rust formatting, and warning-denied Clippy passed.
 - Production frontend: JavaScript 53.64 KB raw / 19.72 KB gzip; CSS 17.41 KB

@@ -4,7 +4,7 @@ use std::{
     env,
     net::SocketAddr,
     path::{Path, PathBuf},
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use axum::{
@@ -178,6 +178,44 @@ fn sqlite_url(path: &Path) -> String {
     format!("sqlite://{}?mode=rwc", path.display())
 }
 
+/// A cancelled first migration on a network-mounted volume can leave an empty
+/// database plus a journal sidecar. It contains no valid SQLite header or room
+/// state, but makes every later schema write return `database is locked`.
+/// Preserve those forensic files under `/data` and start a fresh database;
+/// never replace a non-empty database.
+fn recover_empty_database(path: &Path) -> std::io::Result<bool> {
+    let metadata = match std::fs::metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(error),
+    };
+    if metadata.len() != 0 {
+        return Ok(false);
+    }
+
+    let parent = path.parent().expect("database path has a parent");
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .expect("database path has a file name");
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    let recovery = parent.join("recovery");
+    std::fs::create_dir_all(&recovery)?;
+    for sidecar in ["", "-journal", "-wal", "-shm"] {
+        let source = parent.join(format!("{name}{sidecar}"));
+        if source.exists() {
+            std::fs::rename(
+                &source,
+                recovery.join(format!("{name}{sidecar}.empty-{stamp}")),
+            )?;
+        }
+    }
+    Ok(true)
+}
+
 fn sqlite_pool_options() -> SqlitePoolOptions {
     // This is intentionally one connection: the product has one replica and
     // serializes writes, while Azure Files can retain a SQLite read lock across
@@ -271,16 +309,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_env_filter(log_filter)
         .init();
 
-    let (database_url, database_url_source, data_dir_source) = match env::var("DATABASE_URL") {
-        Ok(value) => (value, "supplied", "database-url"),
-        Err(_) => {
-            let (database_path, data_dir_source) =
-                default_database_path(Path::new("/data"), Path::new("data"));
-            let parent = database_path.parent().expect("database path has a parent");
-            std::fs::create_dir_all(parent)?;
-            (sqlite_url(&database_path), "generated", data_dir_source)
-        }
-    };
+    let (database_url, database_url_source, data_dir_source, recovered_empty_database) =
+        match env::var("DATABASE_URL") {
+            Ok(value) => (value, "supplied", "database-url", false),
+            Err(_) => {
+                let (database_path, data_dir_source) =
+                    default_database_path(Path::new("/data"), Path::new("data"));
+                let parent = database_path.parent().expect("database path has a parent");
+                std::fs::create_dir_all(parent)?;
+                let recovered_empty_database = recover_empty_database(&database_path)?;
+                (
+                    sqlite_url(&database_path),
+                    "generated",
+                    data_dir_source,
+                    recovered_empty_database,
+                )
+            }
+        };
     let options: SqliteConnectOptions = database_url
         .parse::<SqliteConnectOptions>()?
         .busy_timeout(Duration::from_secs(10));
@@ -295,7 +340,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let address = SocketAddr::from(([0, 0, 0, 0], port));
     info!(
         database_url_source,
-        data_dir_source, port_source, "runtime configuration"
+        data_dir_source, port_source, recovered_empty_database, "runtime configuration"
     );
     let listener = tokio::net::TcpListener::bind(address).await?;
     info!(%address, "living room lobby listening");
@@ -504,6 +549,43 @@ mod tests {
             default_database_path(&root.join("absent"), &fallback);
         assert_eq!(fallback_path, fallback.join("lobby.db"));
         assert_eq!(fallback_source, "local-fallback");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn empty_database_recovery_preserves_the_partial_migration_files() {
+        let root = std::env::temp_dir().join(format!(
+            "living-room-lobby-empty-database-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let database = root.join("lobby.db");
+        let journal = root.join("lobby.db-journal");
+        std::fs::File::create(&database).unwrap();
+        std::fs::write(&journal, [7_u8; 512]).unwrap();
+
+        assert!(recover_empty_database(&database).unwrap());
+        assert!(!database.exists());
+        assert!(!journal.exists());
+        let recovery = root.join("recovery");
+        let recovered = std::fs::read_dir(&recovery)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect::<Vec<_>>();
+        assert_eq!(recovered.len(), 2);
+        assert!(recovered.iter().any(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with("lobby.db.empty-"))
+        }));
+        assert!(recovered.iter().any(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with("lobby.db-journal.empty-"))
+        }));
+        std::fs::write(&database, b"SQLite format 3\0").unwrap();
+        assert!(!recover_empty_database(&database).unwrap());
+        assert_eq!(std::fs::read(&database).unwrap(), b"SQLite format 3\0");
         std::fs::remove_dir_all(root).unwrap();
     }
 
