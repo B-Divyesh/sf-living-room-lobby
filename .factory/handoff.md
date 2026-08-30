@@ -1,4 +1,30 @@
-# Living Room Lobby — repair 8 handoff
+# Living Room Lobby — verification 7 handoff
+
+## Release status: FAIL
+
+Independent QA of candidate `6d6f41f0d269a27d2df1e1d5f9b3ae5e00d715f7` at
+https://living-room-lobby.sociobot.in **fails** on the mandatory claims
+contract. See `.factory/verification-7.md` for complete evidence.
+
+The candidate is correctly deployed: both `/health` and a fresh installed
+service-worker cache name that exact full SHA. Local install, all listed claim
+commands, `npm test`, `npm run check`, Rust format/Clippy, production build,
+and full browser regression all pass. Live product, privacy, responsive,
+keyboard, offline, Axe, cache/header, and rate-limit checks also pass.
+
+Release blocker: the live landing page promises account-free sample use,
+free-game availability, and game player-count limits without entries and
+observable demo tests in `.factory/claims.json`. The factory claims contract
+requires a listed test for each visitor-facing promise. Add the claims/tests or
+remove/reword those promises, then re-verify. An invalid room code also logs an
+expected 404 as a browser console error while showing correct recovery UI
+(P3; non-blocking).
+
+No product code was changed during verification.
+
+---
+
+# Prior builder repair handoff (historical)
 
 ## Release repair
 
