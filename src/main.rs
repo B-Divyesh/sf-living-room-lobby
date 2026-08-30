@@ -1,6 +1,10 @@
 mod rooms;
 
-use std::{env, net::SocketAddr, path::Path};
+use std::{
+    env,
+    net::SocketAddr,
+    path::{Path, PathBuf},
+};
 
 use axum::{
     body::Body,
@@ -154,6 +158,22 @@ async fn not_found_page() -> (StatusCode, Html<&'static str>) {
     )
 }
 
+/// The factory mounts durable product storage at `/data`.  A standalone binary
+/// still runs without that mount by keeping its database next to its working
+/// directory, which makes the no-environment-variable runtime contract useful
+/// for local smoke tests as well.
+fn default_database_path(data_mount: &Path, fallback_dir: &Path) -> (PathBuf, &'static str) {
+    if data_mount.is_dir() {
+        (data_mount.join("lobby.db"), "durable-data-mount")
+    } else {
+        (fallback_dir.join("lobby.db"), "local-fallback")
+    }
+}
+
+fn sqlite_url(path: &Path) -> String {
+    format!("sqlite://{}?mode=rwc", path.display())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let log_filter = tracing_subscriber::EnvFilter::try_from_default_env()
@@ -163,13 +183,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_env_filter(log_filter)
         .init();
 
-    let (database_url, database_url_source) = match env::var("DATABASE_URL") {
-        Ok(value) => (value, "supplied"),
-        Err(_) => ("sqlite://data/lobby.db?mode=rwc".into(), "default"),
+    let (database_url, database_url_source, data_dir_source) = match env::var("DATABASE_URL") {
+        Ok(value) => (value, "supplied", "database-url"),
+        Err(_) => {
+            let (database_path, data_dir_source) =
+                default_database_path(Path::new("/data"), Path::new("data"));
+            let parent = database_path.parent().expect("database path has a parent");
+            std::fs::create_dir_all(parent)?;
+            (sqlite_url(&database_path), "generated", data_dir_source)
+        }
     };
-    if database_url.starts_with("sqlite://data/") {
-        std::fs::create_dir_all("data")?;
-    }
     let options: SqliteConnectOptions = database_url.parse()?;
     let pool = SqlitePoolOptions::new()
         .max_connections(8)
@@ -183,7 +206,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => (8080, "default"),
     };
     let address = SocketAddr::from(([0, 0, 0, 0], port));
-    info!(database_url_source, port_source, "runtime configuration");
+    info!(database_url_source, data_dir_source, port_source, "runtime configuration");
     let listener = tokio::net::TcpListener::bind(address).await?;
     info!(%address, "living room lobby listening");
 
@@ -369,6 +392,27 @@ mod tests {
             cache_control_for_path("/privacy"),
             "no-cache, must-revalidate"
         );
+    }
+
+    #[test]
+    fn default_database_uses_data_mount_before_local_fallback() {
+        let root = std::env::temp_dir().join(format!(
+            "living-room-lobby-storage-{}",
+            std::process::id()
+        ));
+        let mounted_data = root.join("mounted-data");
+        let fallback = root.join("fallback-data");
+        std::fs::create_dir_all(&mounted_data).unwrap();
+
+        let (mounted_path, mounted_source) = default_database_path(&mounted_data, &fallback);
+        assert_eq!(mounted_path, mounted_data.join("lobby.db"));
+        assert_eq!(mounted_source, "durable-data-mount");
+        assert_eq!(sqlite_url(&mounted_path), format!("sqlite://{}?mode=rwc", mounted_path.display()));
+
+        let (fallback_path, fallback_source) = default_database_path(&root.join("absent"), &fallback);
+        assert_eq!(fallback_path, fallback.join("lobby.db"));
+        assert_eq!(fallback_source, "local-fallback");
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[tokio::test]

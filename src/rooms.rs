@@ -1,7 +1,6 @@
 use std::{
-    collections::HashMap,
     sync::Arc,
-    time::{Duration, Instant},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use axum::{
@@ -22,71 +21,113 @@ use tokio::sync::Mutex;
 pub struct AppState {
     pub pool: SqlitePool,
     write_lock: Arc<Mutex<()>>,
-    room_creation_limiter: Arc<Mutex<HashMap<String, RateWindow>>>,
-    api_request_limiter: Arc<Mutex<HashMap<String, RateWindow>>>,
 }
 
 const ROOM_CREATION_LIMIT: u32 = 12;
-const ROOM_CREATION_WINDOW: Duration = Duration::from_secs(60);
+const ROOM_CREATION_WINDOW_SECONDS: i64 = 60;
 const API_REQUEST_LIMIT: u32 = 40;
-const API_REQUEST_WINDOW: Duration = Duration::from_secs(1);
+const API_REQUEST_WINDOW_SECONDS: i64 = 1;
 const DEMO_WORKSPACE_TTL_SECONDS: i64 = 86_400;
-
-#[derive(Clone, Copy)]
-struct RateWindow {
-    started: Instant,
-    requests: u32,
-}
 
 impl AppState {
     pub fn new(pool: SqlitePool) -> Self {
         Self {
             pool,
             write_lock: Arc::new(Mutex::new(())),
-            room_creation_limiter: Arc::new(Mutex::new(HashMap::new())),
-            api_request_limiter: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
-    async fn allow_room_creation(&self, client: &str) -> bool {
+    async fn allow_room_creation(&self, client: &str) -> Result<bool, sqlx::Error> {
         allow_within(
-            &self.room_creation_limiter,
+            self,
+            "room-creation",
             client,
             ROOM_CREATION_LIMIT,
-            ROOM_CREATION_WINDOW,
+            ROOM_CREATION_WINDOW_SECONDS,
         )
         .await
     }
 
-    async fn allow_api_request(&self, client: &str) -> bool {
+    async fn allow_api_request(&self, client: &str) -> Result<bool, sqlx::Error> {
         allow_within(
-            &self.api_request_limiter,
+            self,
+            "api-request",
             client,
             API_REQUEST_LIMIT,
-            API_REQUEST_WINDOW,
+            API_REQUEST_WINDOW_SECONDS,
         )
         .await
     }
 }
 
 async fn allow_within(
-    limiter: &Arc<Mutex<HashMap<String, RateWindow>>>,
+    state: &AppState,
+    bucket: &str,
     client: &str,
     limit: u32,
-    window_duration: Duration,
-) -> bool {
-    let now = Instant::now();
-    let mut clients = limiter.lock().await;
-    clients.retain(|_, window| now.duration_since(window.started) < window_duration);
-    let window = clients.entry(client.to_owned()).or_insert(RateWindow {
-        started: now,
-        requests: 0,
-    });
-    if window.requests >= limit {
-        return false;
+    window_seconds: i64,
+) -> Result<bool, sqlx::Error> {
+    // This is kept in SQLite rather than process memory.  It means a process
+    // restart cannot erase an active limit, and it shares the same durable
+    // boundary as rooms when `/data` is mounted.  The product is still pinned
+    // to one replica because SQLite is the room store.
+    let _guard = state.write_lock.lock().await;
+    let now = unix_seconds();
+    sqlx::query("DELETE FROM rate_limits WHERE window_started <= ?")
+        .bind(now - ROOM_CREATION_WINDOW_SECONDS)
+        .execute(&state.pool)
+        .await?;
+    let current = sqlx::query(
+        "SELECT window_started, request_count FROM rate_limits WHERE bucket = ? AND client = ?",
+    )
+    .bind(bucket)
+    .bind(client)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    if let Some(row) = current {
+        let started: i64 = row.try_get("window_started")?;
+        let requests: i64 = row.try_get("request_count")?;
+        if now - started < window_seconds {
+            if requests >= i64::from(limit) {
+                return Ok(false);
+            }
+            sqlx::query(
+                "UPDATE rate_limits SET request_count = request_count + 1 WHERE bucket = ? AND client = ?",
+            )
+            .bind(bucket)
+            .bind(client)
+            .execute(&state.pool)
+            .await?;
+            return Ok(true);
+        }
+        sqlx::query(
+            "UPDATE rate_limits SET window_started = ?, request_count = 1 WHERE bucket = ? AND client = ?",
+        )
+        .bind(now)
+        .bind(bucket)
+        .bind(client)
+        .execute(&state.pool)
+        .await?;
+        return Ok(true);
     }
-    window.requests += 1;
-    true
+
+    sqlx::query(
+        "INSERT INTO rate_limits(bucket, client, window_started, request_count) VALUES (?, ?, ?, 1)",
+    )
+    .bind(bucket)
+    .bind(client)
+    .bind(now)
+    .execute(&state.pool)
+    .await?;
+    Ok(true)
+}
+
+fn unix_seconds() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -229,13 +270,10 @@ pub fn demo_router(state: AppState) -> Router<AppState> {
 }
 
 async fn api_rate_limit(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    if state
-        .allow_api_request(&client_key(request.headers()))
-        .await
-    {
-        next.run(request).await
-    } else {
-        ApiError::too_many_requests().into_response()
+    match state.allow_api_request(&client_key(request.headers())).await {
+        Ok(true) => next.run(request).await,
+        Ok(false) => ApiError::too_many_requests().into_response(),
+        Err(_) => ApiError::internal("The lobby is having trouble. Try again.").into_response(),
     }
 }
 
@@ -243,7 +281,7 @@ async fn create_room(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, ApiError> {
-    if !state.allow_room_creation(&client_key(&headers)).await {
+    if !state.allow_room_creation(&client_key(&headers)).await? {
         return Err(ApiError::too_many());
     }
     cleanup(&state.pool).await;
