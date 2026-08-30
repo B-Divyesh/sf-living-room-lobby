@@ -1,3 +1,70 @@
+# Living Room Lobby — repair 9 handoff
+
+## Release status: ready to deploy
+
+This repair addresses the P1/P3 findings in independent verification 7
+(`.factory/verification-7.md`) for base candidate
+`6d6f41f0d269a27d2df1e1d5f9b3ae5e00d715f7`.
+
+### What changed
+
+- Added the required, exact claim entries and one independently runnable demo
+  test for each retained promise:
+  - `account-free-sample` proves a fresh, unauthenticated `/demo` visit opens
+    the ready room without an account step, cookie, or Authorization header.
+  - `free-game-availability` opens Draw Together, Point Panic, and Pass &
+    Guess from the unlicensed sample lobby and confirms no other origin is
+    requested.
+  - `player-count-limits` checks every visible chooser range: Draw Together,
+    Point Panic, and Colour Chorus are `2–10 players`; Pass & Guess and Statue
+    Switch are `3–12 players`. It also starts each free game with the shipped
+    three-player sample. Game data now holds numeric min/max fields and derives
+    each displayed range from them, preventing a label/data drift.
+- Reproduced the exact `ZZZZ` failure before changing it: the old join action
+  returned 404, displayed “That room is gone. Check the code or start a new
+  one.”, and Chromium logged `Failed to load resource`. Missing-room joins now
+  return a successful recovery JSON envelope. The frontend still turns that
+  envelope into the same polite form error; normal missing-room reads retain
+  HTTP 404 semantics.
+- Added Rust route coverage for that recovery envelope and a 390 px Playwright
+  regression that asserts the exact message, one 200 response, and zero
+  console/page errors.
+
+### Verification
+
+- Clean install: `npm ci` — 94 packages, 0 vulnerabilities.
+- `npm test` — 5 Vitest, 4 Node release tests, and 18 Rust tests passed.
+- `npm run check`, `cargo fmt --all -- --check`, and
+  `cargo clippy --all-targets --locked -- -D warnings` passed.
+- `npm run build` passed: JavaScript 53.62 KB raw / 19.78 KB gzip; CSS 17.41
+  KB raw / 4.89 KB gzip.
+- `npm run test:browser` passed. It runs production desktop and 390 px flows,
+  keyboard/D-pad, Axe WCAG 2 A/AA/2.1 A/AA, privacy request capture, offline
+  reload, service-worker shell checks, response-policy/404 checks, host/phone
+  play, and both rate limits.
+- Every exact command listed in `.factory/claims.json` passed independently:
+  `demo-sandbox`, `account-free-sample`, `demo-real-room-isolation`,
+  `offline-reload`, `same-origin-requests`, `remote-controls`, `shared-phone`,
+  `family-pack-price`, `free-game-availability`, and `player-count-limits`.
+- `npm run test:browser -- --grep @regression:invalid-room-code-recovery`
+  passed after reproducing the previous failure.
+- `cargo build --release --locked` passed. A release binary started from a
+  clean temporary working directory with only `PORT=18182`; its generated
+  local-fallback SQLite configuration, `/health`, shell cache policy, and CSP
+  were verified.
+- `./scripts/deploy-container.sh --validate-only` confirmed the checked-in
+  container configuration: Dockerfile, port 8080, `/data`, and one replica.
+
+### Known environment limits
+
+No repository `verify-url.sh` or local `docker` executable is available in
+this worker. The browser suite uses Playwright Axe integration for the required
+accessibility scan; container configuration and the release binary were tested
+locally. Deployment identity is verified by `scripts/verify-release.mjs` after
+the configured container rollout.
+
+---
+
 # Living Room Lobby — verification 7 handoff
 
 ## Release status: FAIL

@@ -156,7 +156,7 @@ function renderHome(): void {
 }
 
 function gameCard(game: (typeof games)[number]): string {
-  return `<article class="game-card"><span class="game-icon" aria-hidden="true">${game.icon}</span><div><h3>${game.name}</h3><p>${game.strap}</p><small>${game.players}</small></div></article>`;
+  return `<article class="game-card" data-game-card="${game.id}"><span class="game-icon" aria-hidden="true">${game.icon}</span><div><h3>${game.name}</h3><p>${game.strap}</p><small>${game.players}</small></div></article>`;
 }
 
 function bindHome(): void {
@@ -207,7 +207,7 @@ function renderHostLobby(): void {
   shell(`<section class="room-heading"><div><p class="eyebrow">Lobby is open</p><h1>Room <em>${room!.code}</em></h1><p>Scan or visit this page and enter the code.</p></div><canvas id="qr" width="180" height="180" aria-label="QR code to join room ${room!.code}"></canvas></section>
     <section class="lobby-grid"><div><div class="section-title"><h2>Who’s in the room?</h2><span>${room!.players.length} / 12</span></div>
       <div class="players ${room!.players.length ? '' : 'empty'}">${room!.players.length ? room!.players.map(playerPebble).join('') : '<div class="empty-state"><span aria-hidden="true">○</span><h3>The floor is open</h3><p>Players appear here as they join. One phone can stand for a whole family.</p></div>'}</div></div>
-      <div><div class="section-title"><h2>Choose the first game</h2></div><div class="game-choices">${games.map((game) => `<button class="choice ${game.paid && !unlocked ? 'locked' : ''}" data-game="${game.id}" ${game.paid && !unlocked ? 'aria-describedby="paid-note"' : ''}><span aria-hidden="true">${game.icon}</span><b>${game.name}</b><small>${game.strap}</small>${game.paid && !unlocked ? '<i>Family Pack</i>' : ''}</button>`).join('')}</div><p id="paid-note" class="sr-only">Requires the one-time Family Pack</p></div></section>
+      <div><div class="section-title"><h2>Choose the first game</h2></div><div class="game-choices">${games.map((game) => `<button class="choice ${game.paid && !unlocked ? 'locked' : ''}" data-game="${game.id}" ${game.paid && !unlocked ? 'aria-describedby="paid-note"' : ''}><span aria-hidden="true">${game.icon}</span><b>${game.name}</b><small>${game.strap} · ${game.players}</small>${game.paid && !unlocked ? '<i>Family Pack</i>' : ''}</button>`).join('')}</div><p id="paid-note" class="sr-only">Requires the one-time Family Pack</p></div></section>
     <div class="command-rail"><button class="button secondary" id="leave-room">Close room</button><p>${room!.players.some((p) => p.mode === 'shared') ? '↻ Shared-phone player ready' : 'Tip: choose “Pass one phone” when joining with kids.'}</p></div>`, 'host');
   const joinUrl = `${location.origin}/?join=${room!.code}`;
   void QRCode.toCanvas(document.querySelector('#qr') as HTMLCanvasElement, joinUrl, { width: 180, margin: 1, color: { dark: '#151a17', light: '#f5f3e8' } });

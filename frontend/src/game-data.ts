@@ -5,16 +5,39 @@ export interface GameInfo {
   icon: string;
   name: string;
   strap: string;
+  minPlayers: number;
+  maxPlayers: number;
   players: string;
   paid?: boolean;
 }
 
+function game(
+  id: GameId,
+  icon: string,
+  name: string,
+  strap: string,
+  minPlayers: number,
+  maxPlayers: number,
+  paid = false,
+): GameInfo {
+  return {
+    id,
+    icon,
+    name,
+    strap,
+    minPlayers,
+    maxPlayers,
+    players: `${minPlayers}–${maxPlayers} players`,
+    paid,
+  };
+}
+
 export const games: GameInfo[] = [
-  { id: 'draw', icon: '✎', name: 'Draw together', strap: 'One picture. Every hand.', players: '2–10 players' },
-  { id: 'point', icon: '◎', name: 'Point panic', strap: 'Aim your phone. Hit the shape.', players: '2–10 players' },
-  { id: 'pass', icon: '↻', name: 'Pass & guess', strap: 'One phone. Everyone plays.', players: '3–12 players' },
-  { id: 'statue', icon: '◇', name: 'Statue switch', strap: 'Freeze in the shape on screen.', players: '3–12 players', paid: true },
-  { id: 'chorus', icon: '≋', name: 'Colour chorus', strap: 'Match the rhythm together.', players: '2–10 players', paid: true },
+  game('draw', '✎', 'Draw together', 'One picture. Every hand.', 2, 10),
+  game('point', '◎', 'Point panic', 'Aim your phone. Hit the shape.', 2, 10),
+  game('pass', '↻', 'Pass & guess', 'One phone. Everyone plays.', 3, 12),
+  game('statue', '◇', 'Statue switch', 'Freeze in the shape on screen.', 3, 12, true),
+  game('chorus', '≋', 'Colour chorus', 'Match the rhythm together.', 2, 10, true),
 ];
 
 export const drawPrompts = ['CAT', 'TREE', 'BOAT', 'SUN', 'FISH', 'HOUSE', 'BIRD', 'CAKE'];

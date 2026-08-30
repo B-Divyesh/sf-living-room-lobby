@@ -7,6 +7,13 @@
     "sandbox": "Fresh desktop browser context; click the landing action, assert the 24-hour seeded workspace and demo: storage namespace, reset it, then start for real and assert demo storage is discarded."
   },
   {
+    "id": "account-free-sample",
+    "claim": "Try the sample without an account.",
+    "where": "landing first-screen facts, Privacy page",
+    "test": "npm run test:browser -- --grep @claim:account-free-sample",
+    "sandbox": "Fresh unauthenticated desktop browser context opens /demo directly, reaches the ready Draw Together room, and proves the sample request carries no Authorization credential or account step."
+  },
+  {
     "id": "demo-real-room-isolation",
     "claim": "Sample play never changes a real room.",
     "where": "landing first-screen facts, demo documentation, README",
@@ -47,5 +54,19 @@
     "where": "landing facts, Family Pack section, README, Terms",
     "test": "npm run test:browser -- --grep @claim:family-pack-price",
     "sandbox": "Fresh desktop browser context at /demo; choose a locked sample game and assert the exact $12 one-time Family Pack message."
+  },
+  {
+    "id": "free-game-availability",
+    "claim": "Draw Together, Point Panic, and Pass & Guess stay free.",
+    "where": "Family Pack section, Terms, README",
+    "test": "npm run test:browser -- --grep @claim:free-game-availability",
+    "sandbox": "Fresh desktop browser context at /demo; use each core game from the ready sample lobby and assert its playable TV state opens without a license or billing request."
+  },
+  {
+    "id": "player-count-limits",
+    "claim": "Draw Together, Point Panic, and Colour Chorus support 2–10 players; Pass & Guess and Statue Switch support 3–12 players.",
+    "where": "game cards and demo room game chooser",
+    "test": "npm run test:browser -- --grep @claim:player-count-limits",
+    "sandbox": "Fresh desktop browser context at /demo; open the ready sample lobby and assert every selectable game visibly shows its exact minimum–maximum player range, then open each free game from the three-player sample."
   }
 ]

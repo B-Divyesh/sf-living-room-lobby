@@ -111,6 +111,104 @@ async function checkDemoSandbox(browser) {
   }
 }
 
+async function checkAccountFreeSample(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const demoRequests = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/demo') demoRequests.push(request);
+  });
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.getByRole('heading', { name: /Draw together/i }).waitFor();
+    assert.equal(await page.locator('.demo-banner').count(), 1, 'The direct sample route did not start a ready demo.');
+    assert.equal(await page.locator('form').count(), 0, 'The ready sample unexpectedly asked for an account step.');
+    assert.deepEqual(await context.cookies(), [], 'The sample should not create an account cookie.');
+    assert.equal(demoRequests.length, 1, 'The direct sample should provision exactly one workspace.');
+    assert.equal(demoRequests[0].headers().authorization, undefined, 'The sample request unexpectedly carried an account credential.');
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkFreeGameAvailability(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const origins = [];
+  page.on('request', (request) => {
+    if (request.url().startsWith('http')) origins.push(new URL(request.url()).origin);
+  });
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    assert.equal(await page.evaluate(() => localStorage.getItem('sb_license:living-room-lobby')), null);
+    await page.locator('#end-game').click();
+    for (const [id, name] of [['draw', 'Draw together'], ['point', 'Point panic'], ['pass', 'Pass & guess']]) {
+      const choice = page.locator(`[data-game="${id}"]`);
+      assert.equal(await choice.evaluate((element) => element.classList.contains('locked')), false, `${name} was marked as paid.`);
+      await choice.click();
+      await page.getByRole('heading', { name: new RegExp(name, 'i') }).waitFor();
+      await page.locator('#end-game').click();
+      await choice.waitFor();
+    }
+    assert.ok(origins.every((origin) => origin === baseUrl), `Free sample play requested another origin: ${origins.join(', ')}`);
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkPlayerCountLimits(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const expectedRanges = [
+    ['draw', 'Draw together', '2–10 players'],
+    ['point', 'Point panic', '2–10 players'],
+    ['pass', 'Pass & guess', '3–12 players'],
+    ['statue', 'Statue switch', '3–12 players'],
+    ['chorus', 'Colour chorus', '2–10 players'],
+  ];
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.locator('#end-game').click();
+    assert.match(await page.locator('.section-title').first().textContent(), /3\s*\/\s*12/, 'The demo did not retain its three-player sample.');
+    for (const [id, name, range] of expectedRanges) {
+      const choice = page.locator(`[data-game="${id}"]`);
+      assert.match(await choice.textContent(), new RegExp(`${name}.*${range}`, 'i'), `${name} did not show ${range}.`);
+    }
+    for (const [id, name] of expectedRanges.slice(0, 3)) {
+      await page.locator(`[data-game="${id}"]`).click();
+      await page.getByRole('heading', { name: new RegExp(name, 'i') }).waitFor();
+      await page.locator('#end-game').click();
+    }
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkInvalidRoomCodeRecovery(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  const errors = recordErrors(page);
+  const joinResponses = [];
+  page.on('response', (response) => {
+    if (/\/api\/rooms\/ZZZZ\/join$/.test(new URL(response.url()).pathname)) joinResponses.push(response);
+  });
+  try {
+    await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    await page.locator('#show-join').click();
+    await page.locator('#room-code').fill('ZZZZ');
+    await page.locator('#player-name').fill('Verifier');
+    await page.locator('#join-form button[type="submit"]').click();
+    await page.waitForFunction(() => document.querySelector('#join-error')?.textContent?.trim().length);
+    assert.equal(await page.locator('#join-error').textContent(), 'That room is gone. Check the code or start a new one.');
+    assert.equal(joinResponses.length, 1, 'The join form did not make exactly one recovery request.');
+    assert.equal(joinResponses[0].status(), 200, 'A mistyped room code must use the successful recovery envelope.');
+    await page.waitForTimeout(100);
+    assert.deepEqual(errors, [], `Invalid room recovery emitted console/page errors: ${errors.join(' | ')}`);
+  } finally {
+    await context.close();
+  }
+}
+
 async function checkDemoRealRoomIsolation(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
@@ -406,6 +504,7 @@ try {
   try {
     if (included('@claim:same-origin-requests') || !grep) await checkDesktopAndPrivacy(browser);
     if (included('@claim:demo-sandbox') || !grep) await checkDemoSandbox(browser);
+    if (included('@claim:account-free-sample') || !grep) await checkAccountFreeSample(browser);
     if (included('@claim:demo-real-room-isolation') || !grep) await checkDemoRealRoomIsolation(browser);
     if (included('@regression:mobile-a11y') || !grep) await checkMobileCatalogueAndPointA11y(browser);
     if (included('@regression:core-room-flow') || !grep) await checkCoreRoomFlow(browser);
@@ -416,7 +515,10 @@ try {
     if (included('@claim:remote-controls') || !grep) await checkRemoteControls(browser);
     if (included('@claim:shared-phone') || !grep) await checkSharedPhoneDemo(browser);
     if (included('@claim:family-pack-price') || !grep) await checkFamilyPackPrice(browser);
+    if (included('@claim:free-game-availability') || !grep) await checkFreeGameAvailability(browser);
+    if (included('@claim:player-count-limits') || !grep) await checkPlayerCountLimits(browser);
     if (included('@claim:offline-reload') || !grep) await checkColdOfflineReload(browser);
+    if (included('@regression:invalid-room-code-recovery') || !grep) await checkInvalidRoomCodeRecovery(browser);
   } finally {
     await browser.close();
   }

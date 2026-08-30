@@ -521,7 +521,16 @@ async fn join_room(
         return Err(ApiError::bad("Unknown play mode."));
     }
     let _guard = state.write_lock.lock().await;
-    let (host_token, mut room) = load_room(&state.pool, &code).await?;
+    let (host_token, mut room) = match load_room(&state.pool, &code).await {
+        Ok(room) => room,
+        // A mistyped code is an expected form outcome, not a broken browser
+        // resource. Returning a recovery envelope keeps Chromium from adding a
+        // failed-resource console error while preserving 404s for room reads.
+        Err(error) if error.status == StatusCode::NOT_FOUND => {
+            return Ok(Json(json!({ "error": error.message, "recoverable": true })));
+        }
+        Err(error) => return Err(error),
+    };
     if room.players.len() >= 12 {
         return Err(ApiError::bad("This room already has 12 players."));
     }
@@ -868,6 +877,34 @@ mod tests {
             .unwrap();
         assert_eq!(limited.status(), StatusCode::TOO_MANY_REQUESTS);
         assert_eq!(limited.headers()[header::RETRY_AFTER], "1");
+    }
+
+    #[tokio::test]
+    async fn missing_room_join_returns_a_recovery_payload_without_a_404() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        let state = AppState::new(pool);
+        let service = router(state.clone()).with_state(state);
+        let response = service
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/ZZZZ/join")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"name":"Verifier","mode":"solo"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let recovery: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(recovery["recoverable"], true);
+        assert_eq!(
+            recovery["error"],
+            "That room is gone. Check the code or start a new one."
+        );
+        assert!(recovery.get("room").is_none());
     }
 
     #[tokio::test]

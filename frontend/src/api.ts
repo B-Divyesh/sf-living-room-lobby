@@ -6,7 +6,7 @@ const JSON_HEADERS = { 'content-type': 'application/json' };
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(path, options);
   const data = (await response.json().catch(() => ({}))) as T & { error?: string };
-  if (!response.ok) throw new Error(data.error || 'The lobby did not answer. Try again.');
+  if (!response.ok || data.error) throw new Error(data.error || 'The lobby did not answer. Try again.');
   return data;
 }
 
