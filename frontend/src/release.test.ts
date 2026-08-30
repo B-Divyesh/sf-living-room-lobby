@@ -16,11 +16,12 @@ describe('release identity and offline updates', () => {
     const dockerfile = readFileSync(repositoryFile('Dockerfile'), 'utf8');
     const serviceWorker = readFileSync(repositoryFile('frontend/public/sw.js'), 'utf8');
     expect(dockerfile).toMatch(/^ARG BUILD_SHA=dev$/m);
-    expect(dockerfile).toContain('FROM rust:1-bookworm AS backend');
+    expect(dockerfile).toContain('FROM rust:1-slim AS backend');
     expect(dockerfile).not.toMatch(/^FROM\s+rust:1\.\d+/m);
     expect(dockerfile.match(/^ARG BUILD_SHA$/gm)).toHaveLength(3);
     expect(dockerfile).toContain('VITE_BUILD_ID="$BUILD_SHA" npm run build');
     expect(dockerfile).toContain('BUILD_SHA="$BUILD_SHA" cargo build --release --locked');
+    expect(dockerfile).toContain('COPY frontend/public/404.html ./frontend/public/404.html');
     expect(dockerfile).toContain('LABEL org.opencontainers.image.revision=${BUILD_SHA}');
     expect(dockerfile).toContain('ENV PORT=8080');
     expect(dockerfile).not.toContain('ENV BUILD_SHA=');
