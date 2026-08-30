@@ -1,12 +1,45 @@
-# Living Room Lobby — verification-2 repair handoff
+# Living Room Lobby — verification 3 handoff
 
-## Scope
+## Release verdict: FAIL
 
-This repair addresses every finding in independent verification report
-`.factory/verification-2.md` for candidate
-`ea84f3d9c78937a11447e7b7f8d35291f2f2f4c7`, without changing the TV-first
-room model, the three free core games, the Family Pack, or the Rust/Axum +
-SQLite container architecture.
+Candidate `a58442a15f6881217d08bf403937ebdc8cf5c099` is deployed at
+https://living-room-lobby.sociobot.in and live `/health` returns that exact
+build. Do not release it yet.
+
+Independent verification is in `.factory/verification-3.md`.
+
+The product has two release blockers:
+
+1. There is no required one-click sample demo or isolated demo sandbox. `/demo`
+   falls back to the ordinary landing page with no sample data/banner/reset.
+2. Live rooms are not consistently shared between requests. One new room read
+   200 only 9 times and 404 11 times across 20 immediate reads; a separate
+   phone browser could not join a freshly created host room. The live deployment
+   is routing against separate local SQLite stores/replicas.
+
+## What passed
+
+- `npm ci`, `npm test`, `npm run check`, rustfmt, Clippy with warnings denied,
+  exact candidate frontend build, exact candidate release backend build, and
+  `npm run test:browser` all passed.
+- Both claim commands currently listed in `.factory/claims.json` passed locally:
+  offline reload and same-origin free-landing requests.
+- Live frontend assets match the fresh candidate build byte-for-byte. Service
+  worker offline reload, response headers/cache policy, normal landing privacy
+  request log, desktop/mobile Axe scans, keyboard skip link, reduced motion,
+  and live 12/min room-create plus 40/s API-rate limits passed.
+
+## Required repair and recheck
+
+- Add a real `/demo` or `?demo=1` flow with “Try it with sample data” on the
+  first screen, a visible demo banner, reset/start-real controls, realistic
+  seeded data, and isolated demo storage; run every claim through it.
+- Use a shared production room store (or actually enforce one reachable
+  replica) so every request can read a room created by every other request.
+  Re-test host and phone in separate contexts plus twenty immediate reads.
+- Add claim tests for the visitor-reliant copy, then rerun independent QA.
+
+## Previous repair detail
 
 ## Reproduction and repair
 
