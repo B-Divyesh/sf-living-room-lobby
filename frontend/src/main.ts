@@ -114,7 +114,8 @@ function renderHome(): void {
       <ol><li><b>TV remote</b><span>Host with arrows and OK.</span></li><li><b>Shared phone</b><span>Pass it after each turn.</span></li><li><b>Personal phone</b><span>Scan once. No install.</span></li></ol>
     </section>
     <section class="catalogue" aria-labelledby="games-title"><div><p class="eyebrow">Language-light games</p><h2 id="games-title">Read less. Play more.</h2></div>
-      <div class="game-strip">${games.slice(0, 3).map(gameCard).join('')}</div>
+      <p id="game-strip-help" class="sr-only">Use the left and right arrow keys to browse all free games.</p>
+      <div class="game-strip" tabindex="0" role="region" aria-label="Free games" aria-describedby="game-strip-help">${games.slice(0, 3).map(gameCard).join('')}</div>
     </section>
     <section class="family-pack" aria-labelledby="pack-title"><div><p class="eyebrow">One-time family pack</p><h2 id="pack-title">Two more games. Yours for good.</h2><p>Unlock Statue switch and Colour chorus for <strong>$12 once</strong>. Free games stay free.</p></div>
       <div class="pack-actions">${unlocked ? '<p class="unlocked">✓ Family Pack unlocked on this device</p>' : `<a class="button primary" href="${checkoutUrl}">Buy the Family Pack</a><details class="restore"><summary>Have a license? Restore it</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" required><button class="button secondary" type="submit">Verify license</button></form></details>`}</div>
@@ -127,6 +128,16 @@ function gameCard(game: (typeof games)[number]): string {
 }
 
 function bindHome(): void {
+  document.querySelector<HTMLElement>('.game-strip')?.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const strip = event.currentTarget as HTMLElement;
+    const distance = Math.max(260, Math.round(strip.clientWidth * 0.8));
+    strip.scrollBy({
+      left: event.key === 'ArrowRight' ? distance : -distance,
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
+    event.preventDefault();
+  });
   document.querySelector('#host-room')?.addEventListener('click', async () => {
     setBusy('#host-room', true, 'Making your lobby…');
     try { const result = await createRoom(); room = result.room; saveSession(result.session); startPolling(); render(); }
@@ -188,7 +199,7 @@ function renderHostGame(): void {
   const info = games.find((item) => item.id === game)!;
   let stage = '';
   if (game === 'draw') stage = `<div class="tv-prompt"><p>Draw this together</p><strong>${room!.prompt}</strong></div><canvas class="tv-canvas" id="tv-canvas" width="1000" height="560" aria-label="The players’ shared drawing"></canvas>`;
-  if (game === 'point') stage = `<div class="tv-prompt compact"><p>Aim at the moss target, then tap</p><strong>POINT!</strong></div><div class="point-arena"><span class="target" style="left:${room!.targetX}%;top:${room!.targetY}%" aria-label="Target"></span>${room!.players.map((p) => `<span class="pointer" style="left:${p.x}%;top:${p.y}%;--player:${p.color}" title="${escapeHtml(p.name)}">${escapeHtml(p.name.slice(0, 1))}</span>`).join('')}</div>`;
+  if (game === 'point') stage = `<div class="tv-prompt compact"><p>Aim at the moss target, then tap</p><strong>POINT!</strong></div><div class="point-arena"><span class="target" style="left:${room!.targetX}%;top:${room!.targetY}%" role="img" aria-label="Moss target"></span>${room!.players.map((p) => `<span class="pointer" style="left:${p.x}%;top:${p.y}%;--player:${p.color}" title="${escapeHtml(p.name)}">${escapeHtml(p.name.slice(0, 1))}</span>`).join('')}</div>`;
   if (game === 'pass') stage = `<div class="tv-prompt"><p>Keep the clue on the phone</p><strong>ACT · POINT · SOUND</strong><span>Pass after every guess</span></div>${scoreboard()}`;
   if (game === 'statue') stage = `<div class="tv-prompt"><p>Make this shape with your whole body</p><strong>${room!.prompt}</strong><span>Freeze together. The host awards the cheer.</span></div>${scoreboard()}`;
   if (game === 'chorus') stage = `<div class="tv-prompt"><p>Tap the colour on the beat</p><strong class="chorus-mark">● &nbsp; ● &nbsp; ●</strong><span>Listen to the room, not a language.</span></div>${scoreboard()}`;
@@ -313,6 +324,7 @@ function escapeHtml(value: string): string { return value.replace(/[&<>'"]/g, (c
 function setBusy(selector: string, busy: boolean, label: string): void { const button = document.querySelector<HTMLButtonElement>(selector); if (button) { button.disabled = busy; button.textContent = label; } }
 
 function remoteKeys(event: KeyboardEvent): void {
+  if (event.defaultPrevented) return;
   if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
   if ((event.target as HTMLElement).matches('input, textarea, canvas')) return;
   const elements = [...document.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled)')].filter((item) => item.offsetParent !== null);

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "offline-reload",
+    "claim": "The home screen keeps working offline after the first visit.",
+    "where": "Offline status in the shared site shell",
+    "test": "npm run test:browser -- --grep @claim:offline-reload",
+    "sandbox": "Fresh browser context; install the worker, clear HTTP cache, go offline, reload, and assert the rendered home screen and cached JS/CSS."
+  },
+  {
+    "id": "same-origin-requests",
+    "claim": "A normal free lobby visit sends requests only to Living Room Lobby.",
+    "where": "Privacy page and README",
+    "test": "npm run test:browser -- --grep @claim:same-origin-requests",
+    "sandbox": "Fresh desktop browser context; capture every HTTP request during the initial free landing flow and assert each origin is the local product origin."
+  }
+]

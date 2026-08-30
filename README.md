@@ -33,6 +33,7 @@ npm run dev          # frontend on :5173, proxies API to :8080
 npm run dev:server   # backend on :8080 in another shell
 npm run check
 npm test
+npm run test:browser  # production-browser, keyboard, Axe, offline, and privacy checks
 npm run build        # reproducible frontend output in dist/
 ```
 
@@ -54,10 +55,18 @@ its tarball build, and the compiled `/health` response identifies that release.
 
 ## Testing and accessibility
 
-`npm test` runs prompt/catalogue tests and Rust API room-flow tests. The UI has
-a skip link, one page-level heading, labelled controls, visible focus, a remote
-D-pad navigation path, 44 px minimum targets, reduced-motion behavior, and
-offline feedback. Test a room with one normal tab and one private/mobile tab.
+`npm test` runs prompt/catalogue tests and Rust API room-flow tests. `npm run
+test:browser` starts a clean local product server and verifies the desktop and
+390 px flows, keyboard/remote controls, Axe WCAG 2 A/AA checks, same-origin
+free-flow requests, and a cold-cache offline reload. The claim commands live
+in [`.factory/claims.json`](.factory/claims.json).
+
+The UI has a skip link, one page-level heading, labelled controls, visible
+focus, a keyboard-scrollable mobile game catalogue, a remote D-pad navigation
+path, 44 px navigation targets, reduced-motion behavior, and offline feedback.
+The room API has a 40-request-per-second per-client guard and a stricter
+12-room-per-minute creation guard. Because the service deliberately uses a
+single SQLite room store, its Container App is deployed with one replica.
 
 ## Privacy and license
 

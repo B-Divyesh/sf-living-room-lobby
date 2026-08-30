@@ -26,7 +26,7 @@ fn app(state: AppState, static_dir: &str) -> Router {
     let index = Path::new(static_dir).join("index.html");
     Router::new()
         .route("/health", get(health))
-        .nest("/api/rooms", rooms::router())
+        .nest("/api/rooms", rooms::router(state.clone()))
         .fallback_service(ServeDir::new(static_dir).fallback(ServeFile::new(index)))
         .with_state(state)
         .layer(SetResponseHeaderLayer::if_not_present(
@@ -93,13 +93,15 @@ fn is_hashed_asset(path: &str) -> bool {
     let Some((stem, _extension)) = name.rsplit_once('.') else {
         return false;
     };
-    let Some((_, fingerprint)) = stem.rsplit_once('-') else {
+    // Vite's URL-safe content hashes may themselves contain `-`, so the
+    // fingerprint starts at the first separator rather than the last one.
+    let Some((_, fingerprint)) = stem.split_once('-') else {
         return false;
     };
     fingerprint.len() >= 8
-        && fingerprint
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric())
+        && fingerprint.chars().all(|character| {
+            character.is_ascii_alphanumeric() || character == '-' || character == '_'
+        })
 }
 
 async fn health() -> (StatusCode, Json<Value>) {
@@ -114,13 +116,17 @@ async fn health() -> (StatusCode, Json<Value>) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let log_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
     tracing_subscriber::fmt()
         .json()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_env_filter(log_filter)
         .init();
 
-    let database_url =
-        env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://data/lobby.db?mode=rwc".into());
+    let (database_url, database_url_source) = match env::var("DATABASE_URL") {
+        Ok(value) => (value, "supplied"),
+        Err(_) => ("sqlite://data/lobby.db?mode=rwc".into(), "default"),
+    };
     if database_url.starts_with("sqlite://data/") {
         std::fs::create_dir_all("data")?;
     }
@@ -132,11 +138,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::migrate!().run(&pool).await?;
 
     let state = AppState::new(pool);
-    let port: u16 = env::var("PORT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(8080);
+    let (port, port_source) = match env::var("PORT").ok().and_then(|value| value.parse().ok()) {
+        Some(value) => (value, "supplied"),
+        None => (8080, "default"),
+    };
     let address = SocketAddr::from(([0, 0, 0, 0], port));
+    info!(database_url_source, port_source, "runtime configuration");
     let listener = tokio::net::TcpListener::bind(address).await?;
     info!(%address, "living room lobby listening");
 
@@ -229,6 +236,10 @@ mod tests {
     fn cache_policy_keeps_hashed_assets_immutable_and_shell_revalidated() {
         assert_eq!(
             cache_control_for_path("/assets/index-D9xQORDg.js"),
+            "public, max-age=31536000, immutable"
+        );
+        assert_eq!(
+            cache_control_for_path("/assets/index-CD-qVe3I.js"),
             "public, max-age=31536000, immutable"
         );
         assert_eq!(

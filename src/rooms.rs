@@ -5,8 +5,10 @@ use std::{
 };
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Request, State},
     http::{header, HeaderMap, StatusCode},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
@@ -21,10 +23,13 @@ pub struct AppState {
     pub pool: SqlitePool,
     write_lock: Arc<Mutex<()>>,
     room_creation_limiter: Arc<Mutex<HashMap<String, RateWindow>>>,
+    api_request_limiter: Arc<Mutex<HashMap<String, RateWindow>>>,
 }
 
 const ROOM_CREATION_LIMIT: u32 = 12;
 const ROOM_CREATION_WINDOW: Duration = Duration::from_secs(60);
+const API_REQUEST_LIMIT: u32 = 40;
+const API_REQUEST_WINDOW: Duration = Duration::from_secs(1);
 
 #[derive(Clone, Copy)]
 struct RateWindow {
@@ -38,23 +43,49 @@ impl AppState {
             pool,
             write_lock: Arc::new(Mutex::new(())),
             room_creation_limiter: Arc::new(Mutex::new(HashMap::new())),
+            api_request_limiter: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     async fn allow_room_creation(&self, client: &str) -> bool {
-        let now = Instant::now();
-        let mut clients = self.room_creation_limiter.lock().await;
-        clients.retain(|_, window| now.duration_since(window.started) < ROOM_CREATION_WINDOW);
-        let window = clients.entry(client.to_owned()).or_insert(RateWindow {
-            started: now,
-            requests: 0,
-        });
-        if window.requests >= ROOM_CREATION_LIMIT {
-            return false;
-        }
-        window.requests += 1;
-        true
+        allow_within(
+            &self.room_creation_limiter,
+            client,
+            ROOM_CREATION_LIMIT,
+            ROOM_CREATION_WINDOW,
+        )
+        .await
     }
+
+    async fn allow_api_request(&self, client: &str) -> bool {
+        allow_within(
+            &self.api_request_limiter,
+            client,
+            API_REQUEST_LIMIT,
+            API_REQUEST_WINDOW,
+        )
+        .await
+    }
+}
+
+async fn allow_within(
+    limiter: &Arc<Mutex<HashMap<String, RateWindow>>>,
+    client: &str,
+    limit: u32,
+    window_duration: Duration,
+) -> bool {
+    let now = Instant::now();
+    let mut clients = limiter.lock().await;
+    clients.retain(|_, window| now.duration_since(window.started) < window_duration);
+    let window = clients.entry(client.to_owned()).or_insert(RateWindow {
+        started: now,
+        requests: 0,
+    });
+    if window.requests >= limit {
+        return false;
+    }
+    window.requests += 1;
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -180,13 +211,25 @@ struct PlayerAction {
     delta: Option<i32>,
 }
 
-pub fn router() -> Router<AppState> {
+pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/", post(create_room))
         .route("/:code", get(get_room))
         .route("/:code/join", post(join_room))
         .route("/:code/host", post(host_update))
         .route("/:code/action", post(player_action))
+        .route_layer(middleware::from_fn_with_state(state, api_rate_limit))
+}
+
+async fn api_rate_limit(State(state): State<AppState>, request: Request, next: Next) -> Response {
+    if state
+        .allow_api_request(&client_key(request.headers()))
+        .await
+    {
+        next.run(request).await
+    } else {
+        ApiError::too_many_requests().into_response()
+    }
 }
 
 async fn create_room(
@@ -429,36 +472,49 @@ fn random_code() -> String {
 struct ApiError {
     status: StatusCode,
     message: String,
+    retry_after: Option<&'static str>,
 }
 impl ApiError {
     fn bad(message: &str) -> Self {
         Self {
             status: StatusCode::BAD_REQUEST,
             message: message.into(),
+            retry_after: None,
         }
     }
     fn not_found() -> Self {
         Self {
             status: StatusCode::NOT_FOUND,
             message: "That room is gone. Check the code or start a new one.".into(),
+            retry_after: None,
         }
     }
     fn unauthorized() -> Self {
         Self {
             status: StatusCode::UNAUTHORIZED,
             message: "This device is not connected to that room.".into(),
+            retry_after: None,
         }
     }
     fn internal(message: &str) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             message: message.into(),
+            retry_after: None,
         }
     }
     fn too_many() -> Self {
         Self {
             status: StatusCode::TOO_MANY_REQUESTS,
             message: "Too many new rooms from this connection. Try again in a minute.".into(),
+            retry_after: Some("60"),
+        }
+    }
+    fn too_many_requests() -> Self {
+        Self {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            message: "Too many requests from this connection. Try again in a second.".into(),
+            retry_after: Some("1"),
         }
     }
 }
@@ -469,12 +525,12 @@ impl From<sqlx::Error> for ApiError {
 }
 impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
-        let is_rate_limited = self.status == StatusCode::TOO_MANY_REQUESTS;
         let mut response = (self.status, Json(json!({ "error": self.message }))).into_response();
-        if is_rate_limited {
-            response
-                .headers_mut()
-                .insert(header::RETRY_AFTER, header::HeaderValue::from_static("60"));
+        if let Some(retry_after) = self.retry_after {
+            response.headers_mut().insert(
+                header::RETRY_AFTER,
+                header::HeaderValue::from_static(retry_after),
+            );
         }
         response
     }
@@ -518,7 +574,8 @@ mod tests {
     async fn room_creation_is_limited_per_forwarded_connection() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         sqlx::migrate!().run(&pool).await.unwrap();
-        let service = router().with_state(AppState::new(pool));
+        let state = AppState::new(pool);
+        let service = router(state.clone()).with_state(state);
         for _ in 0..ROOM_CREATION_LIMIT {
             let response = service
                 .clone()
@@ -565,5 +622,39 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(next_connection.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn every_room_api_route_has_a_per_connection_rate_limit() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        let state = AppState::new(pool);
+        let service = router(state.clone()).with_state(state);
+        for _ in 0..API_REQUEST_LIMIT {
+            let response = service
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri("/ABCD")
+                        .header("x-forwarded-for", "203.0.113.88")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        }
+        let limited = service
+            .oneshot(
+                Request::builder()
+                    .uri("/ABCD")
+                    .header("x-forwarded-for", "203.0.113.88")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(limited.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(limited.headers()[header::RETRY_AFTER], "1");
     }
 }

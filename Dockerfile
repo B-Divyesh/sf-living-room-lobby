@@ -13,7 +13,7 @@ COPY frontend ./frontend
 # local-development release identity when no argument is passed.
 RUN VITE_BUILD_ID="$BUILD_SHA" npm run build
 
-FROM rust:1.90-bookworm AS backend
+FROM rust:1-bookworm AS backend
 WORKDIR /app
 ARG BUILD_SHA
 COPY Cargo.toml Cargo.lock ./
@@ -29,9 +29,11 @@ RUN groupadd --system lobby && useradd --system --gid lobby --home-dir /app lobb
 WORKDIR /app
 COPY --from=backend /app/target/release/living-room-lobby /usr/local/bin/living-room-lobby
 COPY --from=frontend /app/dist ./dist
-# Keep the supplied identity in the final image too. The binary is compiled
-# with the same value, so /health works with only PORT configured at runtime.
-ENV BUILD_SHA=${BUILD_SHA} PORT=8080 DATABASE_URL=sqlite://data/lobby.db?mode=rwc RUST_LOG=info
+# The binary already compiles this identity into /health. Keep it as image
+# metadata while leaving PORT as the only runtime configuration the container
+# needs from the factory.
+LABEL org.opencontainers.image.revision=${BUILD_SHA}
+ENV PORT=8080
 USER lobby
 EXPOSE 8080
 CMD ["living-room-lobby"]
