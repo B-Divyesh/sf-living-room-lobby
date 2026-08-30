@@ -93,11 +93,18 @@ az containerapp update --name "$app_name" --resource-group "$resource_group" \
 # durable mount and one-replica contract survived the update.
 rollout_ready=false
 for _attempt in $(seq 1 60); do
-  read -r actual_image actual_latest actual_ready actual_min actual_max actual_mount actual_storage < <(
+  readarray -t actual_release < <(
     az containerapp show --name "$app_name" --resource-group "$resource_group" \
       --query '[properties.template.containers[0].image, properties.latestRevisionName, properties.latestReadyRevisionName, properties.template.scale.minReplicas, properties.template.scale.maxReplicas, properties.template.containers[0].volumeMounts[?mountPath==`/data`].mountPath | [0], properties.template.volumes[?name==`data`].storageName | [0]]' \
       --output tsv
   )
+  actual_image=${actual_release[0]:-}
+  actual_latest=${actual_release[1]:-}
+  actual_ready=${actual_release[2]:-}
+  actual_min=${actual_release[3]:-}
+  actual_max=${actual_release[4]:-}
+  actual_mount=${actual_release[5]:-}
+  actual_storage=${actual_release[6]:-}
   if [[ "$actual_image" == "$image" && -n "$actual_latest" && "$actual_latest" == "$actual_ready" ]]; then
     rollout_ready=true
     break

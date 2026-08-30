@@ -51,6 +51,7 @@ test('deployment cannot report success before exact live identity verification',
   assert.match(deployScript, /image_tag="\$app_name:\$source_sha"/);
   assert.match(deployScript, /--build-arg "BUILD_SHA=\$source_sha"/);
   assert.match(deployScript, /--revision-suffix "\$\{source_sha:0:12\}"/);
+  assert.match(deployScript, /readarray -t actual_release/);
   assert.ok(updatePosition >= 0, 'Deployment must update the product container app.');
   assert.ok(
     deactivatePosition >= 0 && deactivatePosition < updatePosition,

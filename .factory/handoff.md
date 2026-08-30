@@ -47,7 +47,8 @@ while SQLx was issuing its no-op migration bookkeeping statement.
   with the full source SHA, passes that exact value as `BUILD_SHA`, waits for
   the image's latest revision to be the ready revision, retains one replica and
   the `/data` `sf-living-room-lobby-data` mount, then runs a public identity
-  verifier.
+  verifier. Its Azure TSV parser reads every readiness field explicitly; the
+  prior single-line parser could see the image but miss the ready-revision line.
 - `scripts/verify-release.mjs` fetches uncached `/health` and `/sw.js`, then
   uses a new browser context to assert the sole cold service-worker cache is
   `living-room-lobby-<full-source-sha>`. Its unit tests reproduce both stale
