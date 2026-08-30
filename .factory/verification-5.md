@@ -88,6 +88,8 @@ No `claims.json` problem or failing claim test was found.
 - `npm ci`: success; 94 packages, 0 reported vulnerabilities.
 - `npm test`: 4 Vitest and 10 Rust tests passed.
 - `npm run check`: TypeScript and Cargo checks passed.
+- `cargo fmt --all -- --check` and
+  `cargo clippy --all-targets --locked -- -D warnings`: both passed.
 - `npm run test:browser`: passed, including local normal host/phone draw,
   shared-phone, boundary/rate, privacy, offline, keyboard, desktop/mobile,
   Axe, and 404 checks.

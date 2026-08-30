@@ -16,8 +16,8 @@ full evidence, passed claims, and required remediation.
 
 All declared claim tests, local unit/type/browser checks, live first-read,
 privacy request capture, headers, PWA offline reload, mobile/keyboard/reduced
-motion checks, and Axe checks passed. Those successes do not overcome the P0
-live backend failures.
+motion checks, Axe checks, rustfmt, and warning-denied Clippy passed. Those
+successes do not overcome the P0 live backend failures.
 
 ---
 
