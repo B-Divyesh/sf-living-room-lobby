@@ -1,0 +1,2 @@
+{"timestamp":"2026-09-01T19:04:01.562726Z","level":"INFO","fields":{"message":"runtime configuration","database_url_source":"supplied","data_dir_source":"database-url","port_source":"supplied","recovered_empty_database":false},"target":"living_room_lobby"}
+{"timestamp":"2026-09-01T19:04:01.562793Z","level":"INFO","fields":{"message":"living room lobby listening","address":"0.0.0.0:18182"},"target":"living_room_lobby"}

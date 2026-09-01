@@ -1,3 +1,42 @@
+# Living Room Lobby — verification 8 handoff
+
+## Release status: FAIL
+
+Independent QA of candidate
+`28cef378a56279a9025186bcfca2274ab60254b6` at
+https://living-room-lobby.sociobot.in **fails**. Full evidence is in
+`.factory/verification-8.md`.
+
+Release blockers:
+
+- Live `/health`, the service-worker cache, and the footer identify
+  `6d6f41f0d269a27d2df1e1d5f9b3ae5e00d715f7`, not the candidate.
+- At 390×844 the sample action starts below the first viewport (`y=874.40625`),
+  so the mandatory first screen does not show what to click first.
+- The visible Family Pack checkout URL returns HTTP 404, so the paid path
+  cannot be completed.
+- Visitor-facing feature/privacy/paid promises remain absent from
+  `.factory/claims.json`; the ten listed claim tests all pass, but the claim
+  inventory is incomplete.
+
+An invalid stored license also locks the games without the required quiet
+status notice (P2). The stale live build still logs a 404 for invalid room-code
+recovery; the candidate's exact local regression for that case passes.
+
+Local candidate verification otherwise passes: locked install, all ten claim
+commands, `npm test`, `npm run check`, Rust format/Clippy, frontend and optimized
+backend builds, full Playwright suite, container configuration validation, and
+an exact-SHA `/health` smoke. Fresh live checks passed normal host/shared-phone
+play, twenty concurrent room reads, same-origin demo privacy, Axe, keyboard,
+reduced motion, offline reload, security/cache headers, and limits of 40 API
+requests per second plus 12 room creations per minute. Mobile Lighthouse scored
+100/100/100/100 with LCP 1.4 s, CLS 0, and 179 KiB transferred.
+
+No product code was changed during verification. No unrelated resource was
+accessed or modified.
+
+---
+
 # Living Room Lobby — repair 9 handoff
 
 ## Release status: repair complete; deployment not run
