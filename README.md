@@ -46,6 +46,14 @@ factory deployment access:
 ./scripts/deploy-container.sh
 ```
 
+The command builds the exact Git SHA, preserves a probe room across the `/data`
+handoff, then checks `/health`, the service worker, JavaScript, footer, and a
+real desktop-host plus 390 px shared-phone join. To repeat the public checks:
+
+```sh
+npm run test:live -- "$(git rev-parse HEAD)" https://living-room-lobby.sociobot.in
+```
+
 ## Privacy and terms
 
 Read the live [Privacy page](https://living-room-lobby.sociobot.in/privacy)

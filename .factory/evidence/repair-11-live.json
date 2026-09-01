@@ -1,0 +1,43 @@
+{
+  "implementationCommit": "0a6407c8c8388b60ade18eab23f56b7c4e4d914a",
+  "imageDigest": "sha256:6ddb46fba89d33345137944aaaf652105ab6fb27f39312997e01794945a6f100",
+  "durableRoom": {
+    "code": "P7AC",
+    "retainedAcrossRollout": true
+  },
+  "releaseIdentity": {
+    "health": "0a6407c8c8388b60ade18eab23f56b7c4e4d914a",
+    "serviceWorkerCache": "living-room-lobby-0a6407c8c8388b60ade18eab23f56b7c4e4d914a",
+    "javaScript": "/assets/index-Bm4FvqZX.js",
+    "footer": "0a6407c8c8388b60ade18eab23f56b7c4e4d914a"
+  },
+  "releaseRoom": {
+    "code": "BR9N",
+    "playerId": "G7JFMbfh",
+    "phoneViewport": "390x844",
+    "retainedAfterReload": true
+  },
+  "broaderBrowserRoom": {
+    "code": "3UV9",
+    "readStatuses": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "remoteMoved": true,
+    "passHeading": "Pass the phone",
+    "consoleErrors": [],
+    "pageErrors": []
+  },
+  "accessibility": {
+    "desktopAxeViolations": [],
+    "mobileAxeViolations": [],
+    "focusOutline": "rgb(183, 212, 61) solid 4px"
+  },
+  "offlineCache": "living-room-lobby-0a6407c8c8388b60ade18eab23f56b7c4e4d914a",
+  "lighthouseMobile": {
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100,
+    "lcpMs": 1203,
+    "cls": 0,
+    "totalBytes": 188498
+  }
+}
