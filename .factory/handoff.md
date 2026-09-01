@@ -35,11 +35,20 @@ Local visual evidence:
 - `.factory/evidence/polish-1-first-screen-1440x900.png`
 - `.factory/evidence/polish-1-demo-1440x900.png`
 
-## Rollout
+## Rollout and cold live check
 
-The next committed source will be deployed with `./scripts/deploy-container.sh`.
-After rollout, this handoff and `.factory/polish-1.md` will record the exact
-release identity and cold live checks for `https://living-room-lobby.sociobot.in`.
+Deployed source: `75f801f3a4309edb73c5c0707020e578eccf144d`.
+`./scripts/deploy-container.sh` completed with the owned product image and
+one-replica durable `/data` configuration. The release verifier passed against
+`https://living-room-lobby.sociobot.in`: `/health`, a cold service-worker cache,
+and the footer all identify the deployed source.
+
+A cold public Playwright check passed at 1440×900 and 390×844: first-screen
+sample action, demo banner/reset path, Spanish Draw Together instructions,
+prompt above the command rail, zero Axe WCAG 2/2.1 A/AA violations, route
+announcement, and the 404 shell/metadata. Live evidence is in
+`.factory/evidence/polish-1-live-first-screen-1440x900.png` and
+`.factory/evidence/polish-1-live-demo-1440x900.png`.
 
 ## Known gaps
 

@@ -9,10 +9,20 @@ Repair implementation: `6629e6f58538dd3c53f5dc61eda79cc4b7988b9d`.
 | F-1-3 | Added English, Español, and picture prompts; Spanish translates core host/phone instructions. | `@claim:language-light-round` |
 | F-1-4 | Added a host-plus-390px shared-phone round claim. | `@claim:shared-tv-phone-round` |
 | F-1-5 | Added the rendered host join-page URL and a join-path claim. | `@claim:join-code-path` |
-| F-1-6–F-1-14 | Removed untested README architecture, toolchain, runtime, and build implementation promises. | README review |
+| F-1-6 | Removed the README framework/hosted-assets implementation claim. | README review |
+| F-1-7 | Removed the README Rust/Axum/SQLx implementation claim. | README review |
+| F-1-8 | Removed the unsupported old-browser compatibility claim. | README review |
+| F-1-9 | Removed the SQLite-path/rate-limit implementation claim. | README review |
+| F-1-10 | Removed the single-container implementation claim. | README review |
+| F-1-11 | Removed unsupported minimum-version guarantees. | README review |
+| F-1-12 | Removed the internal database-path description. | README review |
+| F-1-13 | Removed the unverified container-user/runtime guarantee. | README review |
+| F-1-14 | Removed build-ID implementation copy. | README review |
 | F-1-15 | Replaced deployment invariants prose with the direct deployment command. | `./scripts/deploy-container.sh --validate-only` |
-| F-1-16–F-1-17 | Removed long deployment-process and abort promises. | README review |
-| F-1-18–F-1-19 | Replaced test-coverage prose with direct commands. | `npm test`; `npm run test:browser` |
+| F-1-16 | Removed the long deployment-process promise. | README review |
+| F-1-17 | Removed the deployment-abort promise. | README review |
+| F-1-18 | Replaced test-coverage prose with a direct command. | `npm test` |
+| F-1-19 | Replaced browser-test prose with a direct command. | `npm run test:browser` |
 | F-1-20 | Removed the ungrouped accessibility promise; executable Axe regressions remain. | `@regression:mobile-a11y` |
 | F-1-21 | Removed README release assertions and added a footer provenance claim. | `@claim:art-provenance` |
 | F-1-22 | Rebuilt the 404 with header/footer, skip link, metadata, manifest, and recovery link. | `@regression:styled-404` |
@@ -36,5 +46,15 @@ All 20 declared claim commands were run from the clean dependency install.
 `cargo clippy --all-targets --locked -- -D warnings`, `npm run build`, and the
 deployment configuration validation passed. Screenshots are
 `.factory/evidence/polish-1-first-screen-1440x900.png` and
-`.factory/evidence/polish-1-demo-1440x900.png`. Live URL evidence is appended
-after rollout.
+`.factory/evidence/polish-1-demo-1440x900.png`.
+
+## Live recheck
+
+Deployed source: `75f801f3a4309edb73c5c0707020e578eccf144d`.
+`node scripts/verify-release.mjs 75f801f3a4309edb73c5c0707020e578eccf144d
+https://living-room-lobby.sociobot.in` passed: `/health`, service-worker cache,
+and footer all match. A cold live browser check passed the 1440×900 and 390×844
+sample-action geometry, demo banner, Spanish Draw Together route, prompt/rail
+geometry, Axe WCAG 2/2.1 A/AA, route announcement, and 404 header/footer.
+Live screenshots: `.factory/evidence/polish-1-live-first-screen-1440x900.png`
+and `.factory/evidence/polish-1-live-demo-1440x900.png`.
