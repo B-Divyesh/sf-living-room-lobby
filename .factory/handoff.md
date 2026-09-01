@@ -63,16 +63,24 @@ and the existing demo, room, TV-remote, phone, and PWA behaviors.
 
 ### Deployment and live proof
 
-Deploy only the clean committed checkout with
-`./scripts/deploy-container.sh`. The script builds that immutable SHA, retains
-the permitted `sf-living-room-lobby-data` mount at `/data`, keeps scale at 1/1,
-waits for its revision, then refuses success unless `/health`, a cold
-service-worker cache, and the footer all identify that exact SHA. The post-rollout
-command is also reproducible directly:
+The final deployment completed from the clean committed checkout with
+`./scripts/deploy-container.sh`. It retained the permitted
+`sf-living-room-lobby-data` mount at `/data`, kept scale at 1/1, and exited
+only after `/health`, a cold service-worker cache, and the footer each matched
+the exact immutable source SHA. The same release gate against the public URL
+returned one matching backend SHA, `living-room-lobby-<that SHA>` cache, and
+the footer build label.
+
+The post-rollout command is reproducible directly:
 
 ```sh
 node scripts/verify-release.mjs "$(git rev-parse HEAD)" https://living-room-lobby.sociobot.in
 ```
+
+Fresh live Playwright checks also passed on desktop and 390×844 mobile: one
+page-level heading, sample action, no purchase link, zero console errors, and
+zero Axe WCAG 2/2.1 A/AA violations. The mobile sample action remained fully
+visible at `y=548.328125`.
 
 ### Environment limits
 
