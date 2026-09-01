@@ -28,7 +28,7 @@ Repair implementation: `6629e6f58538dd3c53f5dc61eda79cc4b7988b9d`.
 | F-1-22 | Rebuilt the 404 with header/footer, skip link, metadata, manifest, and recovery link. | `@regression:styled-404` |
 | F-1-23 | Added persistent polite route announcements for forward and Back navigation. | `@regression:route-announcement` |
 | F-1-24 | Added **What is stored** using retained tested facts. | retention, demo, license, and tracker claims |
-| F-1-25 | Changed the README sample link to the absolute live `/demo` URL. | README link review |
+| F-1-25 | Changed the README sample link to the absolute live `/demo` URL. | `README links to the live demo instead of a GitHub-relative path` |
 | F-1-26–F-1-27 | Rewrote the README demo and storage sentences in plain words. | `.factory/copy-audit.md` |
 | F-1-28 | Removed the decorative join label. | landing copy review |
 | F-1-29 | Renamed the heading to **Enter the room code**. | landing copy review |
