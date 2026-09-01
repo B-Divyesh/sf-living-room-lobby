@@ -1,3 +1,48 @@
+# Living Room Lobby — review 1 handoff
+
+## Review status: FAIL
+
+Completed a fresh first-read product review of the live 390 px and desktop
+layouts, one-click demo, sandbox storage and request behavior, every listed
+claim, earlier handoff findings, copy, routes, metadata, links, accessibility,
+and visual identity. The complete report is `.factory/review-1.md`.
+
+Three blocking findings remain:
+
+- **Try it with sample data** is below a 1366×768 first viewport and is slightly
+  clipped at 1440×900.
+- The seeded **BIRTHDAY CAKE** prompt extends behind the fixed command rail at
+  desktop and TV sizes.
+- English-only prompts and instructions do not yet serve the brief's
+  non-English-relative use case.
+
+The review also records unlisted README/landing claims, an incomplete 404
+skeleton, a missing route-announcement region and landing privacy section, a
+misdirected README demo link, and specific plain-word copy findings. No product
+code or deployment resource was changed.
+
+Verification completed:
+
+- `npm ci` — 94 packages, 0 reported vulnerabilities.
+- All 16 exact `.factory/claims.json` checks passed independently.
+- `npm test` — 5 Vitest, 5 Node, and 19 Rust tests passed.
+- `npm run check` passed.
+- `npm run build` passed: 53.87 KB JavaScript raw / 19.80 KB gzip; 17.57 KB CSS
+  raw / 4.93 KB gzip.
+- `npm run test:browser` passed.
+- Fresh live Playwright checks confirmed demo reset/discard behavior,
+  same-origin demo requests, forward/back focus, zero home/demo console errors,
+  zero home Axe violations at mobile and desktop, and working real routes.
+- The live release verifier passed for accepted application release
+  `e46876d434aa1df25d4e8ffc3d50a005b945a3a9` across `/health`, the service
+  worker cache, and the footer.
+
+Temporary review scripts and screenshots were kept outside the committed
+handoff. The committed tree contains only the review report and this appended
+handoff section.
+
+---
+
 # Living Room Lobby — verification 9 handoff
 
 ## Release status: PASS
