@@ -57,6 +57,15 @@ az acr build --registry "$registry" --image "$image_tag" --file "$dockerfile" \
   --build-arg "SOURCE_COMMIT=$source_sha" \
   "$repo_dir"
 
+# Create one ordinary room before the handover. Reading this exact code after
+# the new revision starts proves the durable /data share was preserved instead
+# of merely proving that the candidate can create fresh state.
+durability_probe=$(node "$repo_dir/scripts/durable-room-probe.mjs" create)
+if [[ ! "$durability_probe" =~ ^[A-Z0-9]{4}$ ]]; then
+  printf 'deployment durability probe returned an invalid room code: %s\n' "$durability_probe" >&2
+  exit 1
+fi
+
 # Azure Files rejects SQLite's advisory locks. The runtime therefore uses its
 # lock-free VFS only under the product's already-required one-replica boundary.
 # Stop any older product revisions before starting a candidate so two writers
@@ -126,5 +135,6 @@ if [[ "$actual_mount" != "/data" || "$actual_storage" != "sf-living-room-lobby-d
     "${actual_storage:-missing}" "${actual_mount:-missing}" >&2
   exit 1
 fi
+node "$repo_dir/scripts/durable-room-probe.mjs" verify "$durability_probe"
 node "$repo_dir/scripts/verify-release.mjs" "$source_sha"
 printf 'deployed and verified %s with data path %s and scale 1/1\n' "$image" "$data_dir"

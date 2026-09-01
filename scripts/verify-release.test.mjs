@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { assertExactRelease, assertFooterIdentity } from './verify-release.mjs';
+import {
+  assertExactRelease,
+  assertFooterIdentity,
+  assertJavaScriptIdentity,
+  assertSharedPhoneRetained,
+} from './verify-release.mjs';
 
 const candidate = 'f00f2259cdd871f0683cf9978f535a8339cc8094';
 const stale = '3cb790fb647e2b32b9b043c8266d50dd106e45d4';
@@ -49,6 +54,37 @@ test('rejects a footer that does not identify the exact candidate', () => {
   );
 });
 
+test('rejects JavaScript that does not identify the exact candidate', () => {
+  const shell = '<script type="module" src="/assets/index-abcdefgh.js"></script>';
+  assert.equal(assertJavaScriptIdentity(candidate, shell, `const build="${candidate}"`), '/assets/index-abcdefgh.js');
+  assert.throws(
+    () => assertJavaScriptIdentity(candidate, shell, `const build="${stale}"`),
+    /JavaScript release mismatch.*f00f225/,
+  );
+});
+
+test('rejects the verifier-reproduced recovery envelope and a lost host player', () => {
+  const joined = {
+    room: { code: 'PLAY', players: [{ id: 'player-1', mode: 'shared' }] },
+  };
+  const retained = {
+    room: { code: 'PLAY', players: [{ id: 'player-1', mode: 'shared' }] },
+  };
+  assert.doesNotThrow(() => assertSharedPhoneRetained('PLAY', joined, retained));
+  assert.throws(
+    () => assertSharedPhoneRetained(
+      'PLAY',
+      { error: 'That room is gone. Check the code or start a new one.', recoverable: true },
+      retained,
+    ),
+    /Shared-phone join returned the recovery envelope.*That room is gone/,
+  );
+  assert.throws(
+    () => assertSharedPhoneRetained('PLAY', joined, { room: { code: 'PLAY', players: [] } }),
+    /host did not retain the shared-phone player/,
+  );
+});
+
 test('deployment cannot report success before exact live identity verification', async () => {
   const root = fileURLToPath(new URL('..', import.meta.url));
   const deployScript = await readFile(`${root}/scripts/deploy-container.sh`, 'utf8');
@@ -75,7 +111,17 @@ test('deployment cannot report success before exact live identity verification',
     deployScript.indexOf('sf-living-room-lobby-data') < verifyPosition,
     'Deployment must preserve the product data share at /data before reporting success.',
   );
+  assert.ok(
+    deployScript.indexOf('durable-room-probe.mjs" create') < updatePosition
+      && deployScript.indexOf('durable-room-probe.mjs" verify') > updatePosition
+      && deployScript.indexOf('durable-room-probe.mjs" verify') < verifyPosition,
+    'Deployment must retain one real room across the revision handoff before checking the live flow.',
+  );
   const verifierScript = await readFile(`${root}/scripts/verify-release.mjs`, 'utf8');
   assert.match(verifierScript, /page\.locator\('footer'\)\.textContent\(\)/);
   assert.match(verifierScript, /assertFooterIdentity\(expected, footer\)/);
+  assert.match(verifierScript, /assertJavaScriptIdentity\(expected, shell, javaScript\)/);
+  assert.match(verifierScript, /viewport: \{ width: 390, height: 844 \}/);
+  assert.match(verifierScript, /input\[value="shared"\]/);
+  assert.match(verifierScript, /assertSharedPhoneRetained\(code, joined, hostRead\.body\)/);
 });
