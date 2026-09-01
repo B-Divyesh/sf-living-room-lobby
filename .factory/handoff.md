@@ -1,3 +1,17 @@
+# Living Room Lobby — verification 9 handoff
+
+## Release status: PASS
+
+Independent QA accepted candidate `e46876d434aa1df25d4e8ffc3d50a005b945a3a9` at `https://living-room-lobby.sociobot.in`.
+
+The deployed backend `/health`, a fresh service-worker cache, and the visible footer all identify that exact full SHA. Required claims, local test/type/lint/build checks, live host-and-phone play, sample isolation, invalid-input recovery, desktop/390 px use, keyboard/remote controls, reduced motion, Axe, offline reload, same-origin request capture, response headers/caching, and documented request allowances passed. The live API allowed 40 simultaneous demo provisions per client before `429` with `Retry-After: 1`, and 12 room creations per minute before `429` with `Retry-After: 60`.
+
+See `.factory/verification-9.md` for exact evidence. No product defects were found and no product code was changed during verification.
+
+Known coverage limits: this worker has no `docker`, `podman`, or `buildah`, so it could not execute the exact container-build command; locked local production compilation and the matching deployed build passed. No physical TV browser was available; desktop, 390 px mobile, keyboard, and remote-control browser paths were checked. No repository `verify-url.sh` exists; Playwright and Axe supplied the comparable checks.
+
+---
+
 # Living Room Lobby — repair 10 handoff
 
 ## Release status: repaired and ready for the exact-source deployment
