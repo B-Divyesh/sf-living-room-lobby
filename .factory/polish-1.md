@@ -1,0 +1,40 @@
+# Polish 1 — review repair evidence
+
+Repair implementation: `6629e6f58538dd3c53f5dc61eda79cc4b7988b9d`.
+
+| Finding | Change made | Evidence |
+| --- | --- | --- |
+| F-1-1 | Made the desktop hero height-aware and added 1366×768, 1440×900, and 1920×1080 action geometry checks. | `@regression:desktop-first-viewport`; first-screen screenshot |
+| F-1-2 | Reserved the command-rail height, reduced prompt scale by panel width, and reject overlap or clipping. | `@regression:prompt-rail-geometry`; demo screenshot |
+| F-1-3 | Added English, Español, and picture prompts; Spanish translates core host/phone instructions. | `@claim:language-light-round` |
+| F-1-4 | Added a host-plus-390px shared-phone round claim. | `@claim:shared-tv-phone-round` |
+| F-1-5 | Added the rendered host join-page URL and a join-path claim. | `@claim:join-code-path` |
+| F-1-6–F-1-14 | Removed untested README architecture, toolchain, runtime, and build implementation promises. | README review |
+| F-1-15 | Replaced deployment invariants prose with the direct deployment command. | `./scripts/deploy-container.sh --validate-only` |
+| F-1-16–F-1-17 | Removed long deployment-process and abort promises. | README review |
+| F-1-18–F-1-19 | Replaced test-coverage prose with direct commands. | `npm test`; `npm run test:browser` |
+| F-1-20 | Removed the ungrouped accessibility promise; executable Axe regressions remain. | `@regression:mobile-a11y` |
+| F-1-21 | Removed README release assertions and added a footer provenance claim. | `@claim:art-provenance` |
+| F-1-22 | Rebuilt the 404 with header/footer, skip link, metadata, manifest, and recovery link. | `@regression:styled-404` |
+| F-1-23 | Added persistent polite route announcements for forward and Back navigation. | `@regression:route-announcement` |
+| F-1-24 | Added **What is stored** using retained tested facts. | retention, demo, license, and tracker claims |
+| F-1-25 | Changed the README sample link to the absolute live `/demo` URL. | README link review |
+| F-1-26–F-1-27 | Rewrote the README demo and storage sentences in plain words. | `.factory/copy-audit.md` |
+| F-1-28 | Removed the decorative join label. | landing copy review |
+| F-1-29 | Renamed the heading to **Enter the room code**. | landing copy review |
+| F-1-30 | Renamed the submit action to **Join room**. | landing copy review |
+| F-1-31 | Replaced the hero slogan with TV/phone guidance. | `.factory/copy-audit.md` |
+| F-1-32 | Replaced the Draw Together metaphor with a shared-canvas description. | `@claim:shared-tv-canvas` |
+| F-1-33 | Normalized game names to title case. | source and README review |
+| F-1-34 | Removed the unexplained factory test-setting instruction. | README review |
+| F-1-35 | Changed “families” to **sample players**. | `.factory/copy-audit.md` |
+
+## Verification
+
+All 20 declared claim commands were run from the clean dependency install.
+`npm test`, `npm run check`, `cargo fmt --all -- --check`,
+`cargo clippy --all-targets --locked -- -D warnings`, `npm run build`, and the
+deployment configuration validation passed. Screenshots are
+`.factory/evidence/polish-1-first-screen-1440x900.png` and
+`.factory/evidence/polish-1-demo-1440x900.png`. Live URL evidence is appended
+after rollout.
