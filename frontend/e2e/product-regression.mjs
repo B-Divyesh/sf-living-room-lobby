@@ -276,6 +276,78 @@ async function checkMobileCatalogueAndPointA11y(browser) {
   }
 }
 
+async function checkMobileFirstViewport(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    const action = await page.getByRole('link', { name: /Try it with sample data/ }).boundingBox();
+    assert.ok(action, 'The required sample action was not rendered.');
+    assert.ok(
+      action.y >= 0 && action.y + action.height <= 844,
+      `The sample action must fit the cold 390×844 viewport, but occupied y=${action.y}–${action.y + action.height}.`,
+    );
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkSharedTvCanvas(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    const before = await page.locator('#tv-canvas').evaluate((canvas) => (canvas).toDataURL());
+    await page.evaluate(() => sessionStorage.setItem('demo:living-room-lobby:session', JSON.stringify({
+      role: 'player', code: 'DEMO', token: 'demo-player-demo-asha', playerId: 'demo-asha', name: 'Asha', mode: 'solo',
+    })));
+    await page.reload({ waitUntil: 'networkidle' });
+    const pad = await page.locator('#draw-pad').boundingBox();
+    assert.ok(pad, 'The sample player did not receive a drawing pad.');
+    await page.mouse.move(pad.x + 40, pad.y + 40);
+    await page.mouse.down();
+    await page.mouse.move(pad.x + 160, pad.y + 130);
+    await page.mouse.up();
+    await page.waitForFunction(() => {
+      const saved = localStorage.getItem('demo:living-room-lobby:room');
+      return saved ? JSON.parse(saved).drawing.length > 13 : false;
+    });
+    await page.evaluate(() => sessionStorage.setItem('demo:living-room-lobby:session', JSON.stringify({ role: 'host', code: 'DEMO', token: 'demo-host-token' })));
+    await page.reload({ waitUntil: 'networkidle' });
+    const after = await page.locator('#tv-canvas').evaluate((canvas) => (canvas).toDataURL());
+    assert.notEqual(after, before, 'A phone drawing did not appear on the shared TV canvas.');
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkPointControls(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.locator('#end-game').click();
+    await page.locator('[data-game="point"]').click();
+    await page.evaluate(() => sessionStorage.setItem('demo:living-room-lobby:session', JSON.stringify({
+      role: 'player', code: 'DEMO', token: 'demo-player-demo-asha', playerId: 'demo-asha', name: 'Asha', mode: 'solo',
+    })));
+    await page.reload({ waitUntil: 'networkidle' });
+    const controls = page.locator('[data-move]');
+    assert.equal(await controls.count(), 4, 'Point Panic must show all four labeled arrow controls.');
+    assert.equal(await page.locator('#motion').count(), 1, 'Point Panic must offer the optional tilt control.');
+    await page.locator('[data-move="up"]').click();
+    await page.locator('[data-move="up"]').click();
+    await page.waitForTimeout(100);
+    const pointer = await page.evaluate(() => {
+      const saved = localStorage.getItem('demo:living-room-lobby:room');
+      return saved && JSON.parse(saved).players.find((item) => item.id === 'demo-asha');
+    });
+    assert.ok(pointer && pointer.y < 41, `The labeled arrow pad did not move Asha: ${JSON.stringify(pointer)}`);
+  } finally {
+    await context.close();
+  }
+}
+
 async function assertDurableRoomReads(host, phone, code) {
   // The verifier's P0 saw a new room return both 200 and 404 as traffic hit
   // different replicas. Read through the independent TV and phone contexts
@@ -437,17 +509,84 @@ async function checkSharedPhoneDemo(browser) {
   }
 }
 
-async function checkFamilyPackPrice(browser) {
+async function checkFamilyPackUnavailable(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
   try {
     await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
-    await page.locator('#end-game').click();
+    await page.locator('#start-real').click();
+    await page.getByRole('heading', { name: /Extra games are not available yet/ }).waitFor();
+    assert.equal(await page.getByRole('link', { name: /Buy the Family Pack/i }).count(), 0, 'An unavailable checkout must not be advertised as a purchase action.');
+    assert.match(await page.locator('.family-pack').textContent(), /Hosted checkout is being set up/);
+    await page.locator('#host-room').click();
     await page.locator('[data-game="statue"]').click();
     await page.locator('.toast.show').waitFor();
-    assert.match(await page.locator('.toast.show').textContent(), /\$12 one-time Family Pack/);
+    assert.match(await page.locator('.toast.show').textContent(), /extra game is not available yet/i);
     await page.locator('[data-game="draw"]').click();
     await page.locator('#tv-canvas').waitFor();
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkInactiveLicenseNotice(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const requests = [];
+  await context.route('https://api.sociobot.in/api/v1/products/living-room-lobby/verify?license=inactive-license-token', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ valid: false, reason: 'revoked' }),
+  }));
+  page.on('request', (request) => requests.push(request.url()));
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseUrl}/?license=inactive-license-token`, { waitUntil: 'networkidle' });
+    await page.locator('.license-status').waitFor({ timeout: 5_000 });
+    const renderedStatus = await page.locator('.license-status').textContent();
+    assert.match(renderedStatus || '', /This license is no longer active/, `Inactive license status was not rendered: ${await page.locator('body').textContent()}`);
+    assert.doesNotMatch(page.url(), /license=/, 'A captured license token must be removed from the address bar.');
+    assert.equal(await page.locator('.unlocked').count(), 0, 'An inactive license unlocked the Family Pack.');
+    const storedLicense = await page.evaluate(() => ({
+      token: localStorage.getItem('sb_license:living-room-lobby'),
+      verdict: JSON.parse(localStorage.getItem('sb_license:living-room-lobby:verdict') || '{}'),
+    }));
+    assert.equal(storedLicense.token, 'inactive-license-token');
+    assert.equal(storedLicense.verdict.valid, false);
+    assert.equal(typeof storedLicense.verdict.checkedAt, 'number');
+    assert.ok(requests.some((url) => url.includes('/verify?license=inactive-license-token')), 'The inactive license was not checked with Sociobot.');
+    assert.ok(!requests.some((url) => new URL(url).origin === baseUrl && new URL(url).pathname.startsWith('/api/rooms')), 'License verification must not send a token to the room API.');
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkNoAdvertisingOrAnalytics(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const requests = [];
+  page.on('request', (request) => requests.push(request.url()));
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    assert.ok(requests.every((url) => new URL(url).origin === baseUrl), `A sample visit requested a third-party asset: ${requests.join(', ')}`);
+    assert.equal(await page.locator('script[src]').evaluateAll((scripts) => scripts.every((script) => new URL(script.src).origin === location.origin)), true);
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkMinimalJoinData(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.locator('#start-real').click();
+    await page.locator('#show-join').click();
+    const controls = await page.locator('#join-form input').evaluateAll((inputs) => inputs.map((input) => ({ name: input.name, type: input.type, autocomplete: input.autocomplete })));
+    assert.deepEqual(controls, [
+      { name: 'code', type: 'text', autocomplete: 'off' },
+      { name: 'name', type: 'text', autocomplete: 'nickname' },
+      { name: 'mode', type: 'radio', autocomplete: '' },
+      { name: 'mode', type: 'radio', autocomplete: '' },
+    ]);
   } finally {
     await context.close();
   }
@@ -507,6 +646,7 @@ try {
     if (included('@claim:account-free-sample') || !grep) await checkAccountFreeSample(browser);
     if (included('@claim:demo-real-room-isolation') || !grep) await checkDemoRealRoomIsolation(browser);
     if (included('@regression:mobile-a11y') || !grep) await checkMobileCatalogueAndPointA11y(browser);
+    if (included('@regression:mobile-first-viewport') || !grep) await checkMobileFirstViewport(browser);
     if (included('@regression:core-room-flow') || !grep) await checkCoreRoomFlow(browser);
     if (included('@regression:shared-room-store') || !grep) await checkSharedRoomReads();
     if (included('@regression:room-create-limit') || !grep) await checkRoomCreationLimit();
@@ -514,7 +654,12 @@ try {
     if (included('@regression:styled-404') || !grep) await checkDesignedNotFound(browser);
     if (included('@claim:remote-controls') || !grep) await checkRemoteControls(browser);
     if (included('@claim:shared-phone') || !grep) await checkSharedPhoneDemo(browser);
-    if (included('@claim:family-pack-price') || !grep) await checkFamilyPackPrice(browser);
+    if (included('@claim:shared-tv-canvas') || !grep) await checkSharedTvCanvas(browser);
+    if (included('@claim:point-controls') || !grep) await checkPointControls(browser);
+    if (included('@claim:family-pack-unavailable') || !grep) await checkFamilyPackUnavailable(browser);
+    if (included('@claim:license-status') || !grep) await checkInactiveLicenseNotice(browser);
+    if (included('@claim:no-advertising-or-analytics') || !grep) await checkNoAdvertisingOrAnalytics(browser);
+    if (included('@claim:minimal-join-data') || !grep) await checkMinimalJoinData(browser);
     if (included('@claim:free-game-availability') || !grep) await checkFreeGameAvailability(browser);
     if (included('@claim:player-count-limits') || !grep) await checkPlayerCountLimits(browser);
     if (included('@claim:offline-reload') || !grep) await checkColdOfflineReload(browser);

@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audited 2026-08-30. The count treats a number, a hyphenated term, and an
+Audited 2026-09-01. The count treats a number, a hyphenated term, and an
 abbreviation as one word. No landing sentence exceeds 22 words or contains a
 banned plain-words term.
 
@@ -15,7 +15,7 @@ banned plain-words term.
 | See a ready Draw Together round with three sample families. | 10 | pass |
 | Try the sample without an account. | 6 | pass |
 | Sample play never changes a real room. | 7 | pass |
-| Extra games cost $12 once. | 5 | pass |
+| Extra games are not available yet. | 6 | pass |
 | Use a TV remote to move and choose. | 9 | pass |
 | One screen brings the room together. | 6 | pass |
 | Use the code shown on the TV. | 7 | pass |
@@ -25,7 +25,7 @@ banned plain-words term.
 | Scan once. | 2 | pass |
 | Games with short prompts | 4 | pass |
 | Choose a game | 3 | pass |
-| Get Statue switch and Colour chorus for $12 once. | 9 | pass |
+| Extra games are not available yet. | 6 | pass |
 | Free games stay free. | 4 | pass |
 
 ## Terminology

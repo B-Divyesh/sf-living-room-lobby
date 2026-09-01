@@ -3,7 +3,8 @@ import './style.css';
 import { createRoom, getRoom, hostUpdate, joinRoom, playerAction } from './api';
 import { DEMO_PATH, demoMode, discardDemo, loadDemoRoom, loadDemoSession, provisionDemoWorkspace, resetDemo, saveDemoSession } from './demo';
 import { games, nextPrompt, passPrompts } from './game-data';
-import { cachedUnlock, captureLicense, checkoutUrl, restoreLicense, verifyLicense } from './license';
+import { cachedLicenseStatus, captureLicense, restoreLicense, verifyLicense } from './license';
+import type { LicenseStatus } from './license';
 import { releaseId } from './release';
 import type { GameId, Room, Session, StrokePoint } from './types';
 
@@ -11,7 +12,8 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 const buildId = releaseId(import.meta.env.VITE_BUILD_ID);
 let room: Room | null = demoMode() ? loadDemoRoom() : null;
 let session: Session | null = loadSession();
-let unlocked = demoMode() ? false : cachedUnlock();
+let licenseStatus: LicenseStatus = demoMode() ? 'none' : cachedLicenseStatus();
+let unlocked = licenseStatus === 'active';
 let routeWasDemo = demoMode();
 let offline = !navigator.onLine;
 let errorMessage = '';
@@ -22,7 +24,9 @@ let drawBuffer: StrokePoint[] = [];
 
 if (!demoMode()) {
   captureLicense();
-  void verifyLicense().then((valid) => { unlocked = valid; render(); });
+  licenseStatus = cachedLicenseStatus();
+  unlocked = licenseStatus === 'active';
+  void verifyLicense().then((status) => { licenseStatus = status; unlocked = status === 'active'; render(); });
 }
 
 window.addEventListener('online', () => { offline = false; render(); void pollRoom(); });
@@ -32,7 +36,8 @@ window.addEventListener('popstate', () => {
     discardDemo();
     room = null;
     session = null;
-    unlocked = cachedUnlock();
+    licenseStatus = cachedLicenseStatus();
+    unlocked = licenseStatus === 'active';
   }
   render();
   focusRouteHeading();
@@ -97,6 +102,7 @@ function render(): void {
   if (inDemo && !routeWasDemo) {
     room = loadDemoRoom();
     session = loadDemoSession();
+    licenseStatus = 'none';
     unlocked = false;
     void refreshDemoWorkspace();
   }
@@ -122,7 +128,7 @@ function renderHome(): void {
           <button class="button secondary" id="show-join">Join a room</button>
         </div>
         <p class="action-explanation">See a ready Draw Together round with three sample families.</p>
-        <ul class="plain-facts"><li>Try the sample without an account.</li><li>Sample play never changes a real room.</li><li>Extra games cost $12 once.</li></ul>
+        <ul class="plain-facts"><li>Try the sample without an account.</li><li>Sample play never changes a real room.</li><li>Extra games are not available yet.</li></ul>
         <p class="remote-hint"><kbd>↑</kbd><kbd>↓</kbd><kbd>OK</kbd> Use a TV remote to move and choose.</p>
       </div>
       <figure class="hero-art"><picture><img src="/assets/lobby-hero.webp" width="1536" height="1024" alt="A cozy concrete living room with chairs, cushions, a shared phone and playful hands pointing at a television" fetchpriority="high" decoding="async"></picture><figcaption>One screen brings the room together.</figcaption></figure>
@@ -149,8 +155,8 @@ function renderHome(): void {
       <p id="game-strip-help" class="sr-only">Use the left and right arrow keys to browse all free games.</p>
       <div class="game-strip" tabindex="0" role="region" aria-label="Free games" aria-describedby="game-strip-help">${games.slice(0, 3).map(gameCard).join('')}</div>
     </section>
-    <section class="family-pack" aria-labelledby="pack-title"><div><p class="eyebrow">One-time Family Pack</p><h2 id="pack-title">Two more games for $12</h2><p>Get Statue switch and Colour chorus for <strong>$12 once</strong>. Free games stay free.</p></div>
-      <div class="pack-actions">${unlocked ? '<p class="unlocked">✓ Family Pack unlocked on this device</p>' : `<a class="button primary" href="${checkoutUrl}">Buy the Family Pack</a><details class="restore"><summary>Have a license? Restore it</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" required><button class="button secondary" type="submit" aria-label="Verify Family Pack license">Verify license</button></form></details>`}</div>
+    <section class="family-pack" aria-labelledby="pack-title"><div><p class="eyebrow">Family Pack</p><h2 id="pack-title">Extra games are not available yet</h2><p>Hosted checkout is being set up. Statue switch and Colour chorus stay locked. Free games stay free.</p></div>
+      <div class="pack-actions">${unlocked ? '<p class="unlocked">✓ Family Pack unlocked on this device</p>' : `${licenseStatus === 'inactive' ? '<p class="license-status" role="status">This license is no longer active. Extra games remain locked.</p>' : ''}<details class="restore"><summary>Have a Family Pack license from an earlier purchase? Check it</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" required><button class="button secondary" type="submit" aria-label="Verify Family Pack license">Verify license</button></form></details>`}</div>
     </section>`, 'home');
   bindHome();
 }
@@ -192,8 +198,9 @@ function bindHome(): void {
     event.preventDefault();
     const token = String(new FormData(event.currentTarget as HTMLFormElement).get('license') || '');
     if (!token) return;
-    const valid = await restoreLicense(token); unlocked = valid;
-    errorMessage = valid ? '' : 'That license could not be verified. Check it and try again.'; render();
+    licenseStatus = await restoreLicense(token); unlocked = licenseStatus === 'active';
+    errorMessage = licenseStatus === 'unknown' ? 'We could not check that license. Try again when you are online.' : '';
+    render();
   });
 }
 
@@ -221,7 +228,7 @@ function playerPebble(player: Room['players'][number]): string {
 
 async function startGame(game: GameId): Promise<void> {
   const info = games.find((item) => item.id === game)!;
-  if (info.paid && !unlocked) { errorMessage = 'That game is in the $12 one-time Family Pack.'; render(); return; }
+  if (info.paid && !unlocked) { errorMessage = 'That extra game is not available yet.'; render(); return; }
   try { room = await hostUpdate(session!, { stage: 'playing', game, prompt: nextPrompt(game, 0), round: 0, resetRound: true, message: 'Round started' }); render(); }
   catch (error) { errorMessage = message(error); render(); }
 }
@@ -341,8 +348,8 @@ function setupPointing(): void {
 }
 
 function renderLegal(kind: 'Privacy' | 'Terms'): void {
-  const privacy = `<p><strong>Effective 27 August 2026</strong></p><p>Living Room Lobby is designed without accounts. A room stores a chosen display name, game actions, and scores in our database for up to six hours, then expires. We do not sell data, run advertising trackers, or create profiles.</p><h2>Sample data</h2><p>A demo visit creates an isolated sample workspace that expires after 24 hours. Sample play never changes a real room.</p><h2>On your device</h2><p>A room session is held in session storage. A Family Pack license and its last verification result are held in local storage. You can clear either in your browser settings.</p><h2>Payments</h2><p>Checkout and license verification are handled by Sociobot and its merchant-of-record provider, Dodo. We receive only the license result needed to unlock the pack.</p><h2>Children</h2><p>No email, birth date, voice, photo, or precise location is requested. Adults should choose non-identifying nicknames for children.</p><h2>Questions</h2><p>Email privacy@sociobot.in.</p>`;
-  const terms = `<p><strong>Effective 27 August 2026</strong></p><p>Living Room Lobby provides casual local party games as-is. Use it lawfully and supervise young players around screens and devices.</p><h2>Family Pack</h2><p>The $12 Family Pack is a one-time license for the listed extra games. Sociobot/Dodo is the merchant of record and handles checkout and refunds. Refunded, revoked, or invalid licenses stop unlocking paid games. Core games remain free.</p><h2>Fair play</h2><p>Do not disrupt rooms, automate requests, probe other room codes, or upload harmful content. Rooms and display names are temporary.</p><h2>Availability</h2><p>TV browsers vary. We aim for broad compatibility but cannot promise every browser or network will work without interruption.</p><h2>Contact</h2><p>Email support@sociobot.in.</p>`;
+  const privacy = `<p><strong>Effective 1 September 2026</strong></p><p>Living Room Lobby works without accounts. A room stores its display names, game actions, and scores for up to six hours, then expires. The app does not load advertising or analytics scripts.</p><h2>Sample data</h2><p>A demo visit creates an isolated sample workspace that expires after 24 hours. Sample play never changes a real room.</p><h2>On your device</h2><p>A room session stays in session storage. A Family Pack license and its last check stay in local storage. You can clear either in browser settings.</p><h2>Family Pack licenses</h2><p>If you choose Verify license, your browser sends that token to Sociobot for a result. Our room API is not used for that check.</p><h2>Children</h2><p>The join form asks only for a display name and play mode. It does not ask for an email address, birth date, voice, photo, or location.</p><h2>Questions</h2><p>Email privacy@sociobot.in.</p>`;
+  const terms = `<p><strong>Effective 1 September 2026</strong></p><p>Living Room Lobby provides casual local party games as-is. Use it lawfully and supervise young players around screens and devices.</p><h2>Family Pack</h2><p>Family Pack checkout is not available yet. Statue switch and Colour chorus remain locked. If you have an earlier license, you can check it. An inactive license does not unlock extra games. Core games stay free.</p><h2>Fair play</h2><p>Do not disrupt rooms, automate requests, probe other room codes, or upload harmful content. Rooms and display names are temporary.</p><h2>Availability</h2><p>TV browsers vary. We aim for broad compatibility but cannot promise every browser or network will work without interruption.</p><h2>Contact</h2><p>Email support@sociobot.in.</p>`;
   shell(`<article class="legal"><p class="eyebrow">The plain-language version</p><h1>${kind}</h1>${kind === 'Privacy' ? privacy : terms}<a class="button secondary" href="/" data-nav>Back to the lobby</a></article>`, 'legal');
 }
 
@@ -365,7 +372,8 @@ function bindCommon(): void {
       discardDemo();
       room = null;
       session = null;
-      unlocked = cachedUnlock();
+      licenseStatus = cachedLicenseStatus();
+      unlocked = licenseStatus === 'active';
     }
     history.pushState({}, '', link.href);
     render();
@@ -379,7 +387,8 @@ function startForReal(): void {
   discardDemo();
   room = null;
   session = null;
-  unlocked = cachedUnlock();
+  licenseStatus = cachedLicenseStatus();
+  unlocked = licenseStatus === 'active';
   history.replaceState({}, '', '/');
   render();
   focusRouteHeading();

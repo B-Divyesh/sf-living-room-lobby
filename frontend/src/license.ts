@@ -6,7 +6,16 @@ const BILLING_BASE = import.meta.env.VITE_BILLING_BASE || 'https://api.sociobot.
 
 interface Verdict { valid: boolean; checkedAt: number }
 
-export const checkoutUrl = `${BILLING_BASE}/api/v1/products/${SLUG}/checkout`;
+export type LicenseStatus = 'none' | 'active' | 'inactive' | 'unknown';
+
+function cachedVerdict(): Verdict | null {
+  try {
+    const value = JSON.parse(localStorage.getItem(VERDICT_KEY) || '') as Verdict;
+    return typeof value.valid === 'boolean' && typeof value.checkedAt === 'number' ? value : null;
+  } catch {
+    return null;
+  }
+}
 
 export function captureLicense(): void {
   const url = new URL(location.href);
@@ -18,36 +27,35 @@ export function captureLicense(): void {
   history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
 }
 
-export function cachedUnlock(): boolean {
+export function cachedLicenseStatus(): LicenseStatus {
   const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) return false;
-  try { return Boolean((JSON.parse(localStorage.getItem(VERDICT_KEY) || '') as Verdict).valid); } catch { return false; }
+  if (!token) return 'none';
+  const cached = cachedVerdict();
+  if (!cached) return 'unknown';
+  return cached.valid ? 'active' : 'inactive';
 }
 
-export async function verifyLicense(force = false): Promise<boolean> {
+export async function verifyLicense(force = false): Promise<LicenseStatus> {
   const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) return false;
-  try {
-    const cached = JSON.parse(localStorage.getItem(VERDICT_KEY) || '{}') as Verdict;
-    if (!force && cached.checkedAt && Date.now() - cached.checkedAt < DAY) return cached.valid;
-  } catch { /* verify below */ }
+  if (!token) return 'none';
+  const cached = cachedVerdict();
+  if (!force && cached && Date.now() - cached.checkedAt < DAY) return cached.valid ? 'active' : 'inactive';
   try {
     const response = await fetch(`${BILLING_BASE}/api/v1/products/${SLUG}/verify?license=${encodeURIComponent(token)}`);
+    if (!response.ok) throw new Error(`License verification returned ${response.status}`);
     const data = (await response.json()) as { valid: boolean };
     const verdict = { valid: Boolean(data.valid), checkedAt: Date.now() };
     localStorage.setItem(VERDICT_KEY, JSON.stringify(verdict));
-    return verdict.valid;
+    return verdict.valid ? 'active' : 'inactive';
   } catch {
-    return cachedUnlock();
+    return cachedLicenseStatus();
   }
 }
 
-export async function restoreLicense(token: string): Promise<boolean> {
+export async function restoreLicense(token: string): Promise<LicenseStatus> {
   const clean = token.trim();
-  if (clean.length < 12) return false;
+  if (clean.length < 12) return 'none';
   localStorage.setItem(TOKEN_KEY, clean);
   localStorage.removeItem(VERDICT_KEY);
-  const valid = await verifyLicense(true);
-  if (!valid) localStorage.removeItem(TOKEN_KEY);
-  return valid;
+  return verifyLicense(true);
 }

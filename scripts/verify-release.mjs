@@ -21,6 +21,15 @@ export function assertExactRelease(expected, health, serviceWorker) {
   );
 }
 
+export function assertFooterIdentity(expected, footer) {
+  assert.match(expected, SHA_PATTERN, 'The expected release must be a full lowercase Git SHA.');
+  assert.match(
+    footer || '',
+    new RegExp(`\\b${expected}\\b`),
+    `Footer release mismatch: expected ${expected}, received ${footer || 'no footer text'}.`,
+  );
+}
+
 async function fetchRelease(baseUrl, expected, attempt) {
   const suffix = `release-check=${expected}-${attempt}`;
   const [healthResponse, workerResponse] = await Promise.all([
@@ -50,7 +59,7 @@ async function waitForExactHttpRelease(baseUrl, expected) {
   throw new Error(`Release did not become current after ${attempts} checks: ${lastError?.message}`);
 }
 
-async function assertColdServiceWorkerCache(baseUrl, expected) {
+async function assertColdServiceWorkerCacheAndFooter(baseUrl, expected) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   try {
@@ -64,7 +73,9 @@ async function assertColdServiceWorkerCache(baseUrl, expected) {
       [`living-room-lobby-${expected}`],
       `Cold service-worker cache mismatch: ${cacheNames.join(', ') || 'no cache'}.`,
     );
-    return cacheNames;
+    const footer = await page.locator('footer').textContent();
+    assertFooterIdentity(expected, footer);
+    return { cache: cacheNames[0], footer };
   } finally {
     await context.close();
     await browser.close();
@@ -74,8 +85,8 @@ async function assertColdServiceWorkerCache(baseUrl, expected) {
 export async function verifyRelease(baseUrl, expected) {
   const normalizedBase = baseUrl.replace(/\/$/, '');
   const { health } = await waitForExactHttpRelease(normalizedBase, expected);
-  const cacheNames = await assertColdServiceWorkerCache(normalizedBase, expected);
-  return { build: health.build, cache: cacheNames[0] };
+  const { cache, footer } = await assertColdServiceWorkerCacheAndFooter(normalizedBase, expected);
+  return { build: health.build, cache, footer };
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { assertExactRelease } from './verify-release.mjs';
+import { assertExactRelease, assertFooterIdentity } from './verify-release.mjs';
 
 const candidate = 'f00f2259cdd871f0683cf9978f535a8339cc8094';
 const stale = '3cb790fb647e2b32b9b043c8266d50dd106e45d4';
@@ -41,6 +41,14 @@ test('accepts only one exact full candidate identity', () => {
   );
 });
 
+test('rejects a footer that does not identify the exact candidate', () => {
+  assert.doesNotThrow(() => assertFooterIdentity(candidate, `Built by Param Factory · ${candidate}`));
+  assert.throws(
+    () => assertFooterIdentity(candidate, `Built by Param Factory · ${stale}`),
+    /Footer release mismatch.*f00f225.*3cb790f/,
+  );
+});
+
 test('deployment cannot report success before exact live identity verification', async () => {
   const root = fileURLToPath(new URL('..', import.meta.url));
   const deployScript = await readFile(`${root}/scripts/deploy-container.sh`, 'utf8');
@@ -67,4 +75,7 @@ test('deployment cannot report success before exact live identity verification',
     deployScript.indexOf('sf-living-room-lobby-data') < verifyPosition,
     'Deployment must preserve the product data share at /data before reporting success.',
   );
+  const verifierScript = await readFile(`${root}/scripts/verify-release.mjs`, 'utf8');
+  assert.match(verifierScript, /page\.locator\('footer'\)\.textContent\(\)/);
+  assert.match(verifierScript, /assertFooterIdentity\(expected, footer\)/);
 });

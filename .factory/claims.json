@@ -49,11 +49,11 @@
     "sandbox": "Fresh mobile browser context at /demo; choose Pass & Guess, enter the shipped shared-phone sample session, and assert the answer-covering Pass the phone screen."
   },
   {
-    "id": "family-pack-price",
-    "claim": "Extra games cost $12 once.",
+    "id": "family-pack-unavailable",
+    "claim": "Family Pack checkout is not available yet; Statue Switch and Colour Chorus remain locked while Draw Together, Point Panic, and Pass & Guess stay free.",
     "where": "landing facts, Family Pack section, README, Terms",
-    "test": "npm run test:browser -- --grep @claim:family-pack-price",
-    "sandbox": "Fresh desktop browser context at /demo; choose a locked sample game and assert the exact $12 one-time Family Pack message."
+    "test": "npm run test:browser -- --grep @claim:family-pack-unavailable",
+    "sandbox": "Fresh desktop browser context starts at /demo then starts for real; assert there is no buy link, the unavailable checkout message is visible, a locked game gives the honest recovery message, and Draw Together still opens."
   },
   {
     "id": "free-game-availability",
@@ -68,5 +68,47 @@
     "where": "game cards and demo room game chooser",
     "test": "npm run test:browser -- --grep @claim:player-count-limits",
     "sandbox": "Fresh desktop browser context at /demo; open the ready sample lobby and assert every selectable game visibly shows its exact minimum–maximum player range, then open each free game from the three-player sample."
+  },
+  {
+    "id": "shared-tv-canvas",
+    "claim": "Every connected phone contributes to one TV canvas.",
+    "where": "README and Draw Together phone screen",
+    "test": "npm run test:browser -- --grep @claim:shared-tv-canvas",
+    "sandbox": "Fresh mobile browser context at /demo switches the shipped Asha sample to player mode, draws on the phone pad, switches back to the demo host, and asserts the rendered TV canvas pixels changed."
+  },
+  {
+    "id": "point-controls",
+    "claim": "Point Panic shows a tilt option and lets a phone aim with the labeled arrow pad.",
+    "where": "README and Point Panic phone screen",
+    "test": "npm run test:browser -- --grep @claim:point-controls",
+    "sandbox": "Fresh mobile browser context at /demo opens Point Panic as the shipped Asha player, asserts the tilt option and four labeled arrow buttons, presses arrows, and observes the saved pointer position change."
+  },
+  {
+    "id": "room-retention",
+    "claim": "A real room stores its display names, game actions, and scores for up to six hours, then expires.",
+    "where": "Privacy page",
+    "test": "cargo test --locked claim_real_room_retention_expires_after_six_hours",
+    "sandbox": "Isolated in-memory SQLite database with a room one second older than six hours and a room exactly six hours old; run cleanup and assert only the older room is removed."
+  },
+  {
+    "id": "no-advertising-or-analytics",
+    "claim": "The app does not load advertising or analytics scripts.",
+    "where": "Privacy page",
+    "test": "npm run test:browser -- --grep @claim:no-advertising-or-analytics",
+    "sandbox": "Fresh desktop browser context at /demo records every request and script source, asserting each is same-origin."
+  },
+  {
+    "id": "minimal-join-data",
+    "claim": "The join form asks only for a display name and play mode.",
+    "where": "Privacy page",
+    "test": "npm run test:browser -- --grep @claim:minimal-join-data",
+    "sandbox": "Fresh desktop browser context starts at /demo then starts for real, opens Join a room, and asserts the exact code, display-name, and mode controls with no personal-data fields."
+  },
+  {
+    "id": "license-status",
+    "claim": "An inactive stored Family Pack license stays locked and shows a visible status; its check goes directly to Sociobot, not the room API.",
+    "where": "Family Pack section, Privacy page, Terms",
+    "test": "npm run test:browser -- --grep @claim:license-status",
+    "sandbox": "Fresh desktop browser context starts at /demo, then visits the landing page with an inactive fixture license; intercept the documented Sociobot verification response, assert the token is stripped from the URL and cached locally, the quiet inactive notice is visible, games remain locked, and no room API request carries the check."
   }
 ]

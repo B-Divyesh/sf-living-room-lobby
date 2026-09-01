@@ -15,9 +15,10 @@ The free room includes:
 - **Point panic:** tilt a phone or use the accessible arrow pad to aim.
 - **Pass & guess:** one shared phone moves around the room after every clue.
 
-The optional $12 one-time Family Pack adds Statue switch and Colour chorus.
-Purchases use Sociobot’s hosted license checkout; this repository contains no
-payment-provider code or product IDs.
+Family Pack checkout is not available yet. Statue switch and Colour chorus stay
+locked while checkout registration is completed. Draw together, Point panic,
+and Pass & guess remain free. If you have an earlier Family Pack license, you
+can paste it into the app to check its status.
 
 ## Architecture
 
@@ -44,7 +45,8 @@ npm run build        # reproducible frontend output in dist/
 The server defaults to `sqlite:///data/lobby.db?mode=rwc` when `/data` exists,
 falling back to `sqlite://data/lobby.db?mode=rwc` for a standalone binary.
 Override with `DATABASE_URL`; set `PORT` to change the default `8080`. Set
-`VITE_BILLING_BASE` only when building for the factory’s staging billing API.
+`VITE_BILLING_BASE` only when building against the factory’s staging license
+verification API.
 
 ## Container
 
@@ -85,7 +87,7 @@ path, 44 px navigation targets, reduced-motion behavior, and offline feedback.
 ## Privacy and license
 
 See `/privacy` and `/terms` in the running application. Family Pack license
-tokens remain in the browser’s local storage.
+tokens and the last verification result remain in the browser’s local storage.
 
 MIT licensed. Generated-image provenance and visual tokens are documented in
 [`.factory/design.md`](.factory/design.md).

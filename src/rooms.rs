@@ -792,6 +792,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn claim_real_room_retention_expires_after_six_hours() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        sqlx::query("INSERT INTO rooms(code, host_token, state_json, updated_at) VALUES ('OLD1', 'token', '{}', unixepoch() - 21601)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO rooms(code, host_token, state_json, updated_at) VALUES ('LIVE', 'token', '{}', unixepoch() - 21600)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        cleanup(&pool).await;
+
+        let remaining: Vec<String> = sqlx::query_scalar("SELECT code FROM rooms ORDER BY code")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            remaining,
+            vec!["LIVE"],
+            "rooms expire only after six hours of inactivity"
+        );
+    }
+
+    #[tokio::test]
     async fn room_creation_is_limited_per_forwarded_connection() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         sqlx::migrate!().run(&pool).await.unwrap();

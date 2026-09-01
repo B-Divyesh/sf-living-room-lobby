@@ -1,3 +1,89 @@
+# Living Room Lobby — repair 10 handoff
+
+## Release status: repaired and ready for the exact-source deployment
+
+This repair resolves every release blocker in independent verification 8
+(`.factory/verification-8.md`) while keeping the Rust/Axum + SQLite container
+and the existing demo, room, TV-remote, phone, and PWA behaviors.
+
+### Reproduced before changing code
+
+- The required stale-release check still failed against the permitted product
+  URL: expected `28cef378a56279a9025186bcfca2274ab60254b6`, but `/health`
+  returned `6d6f41f0d269a27d2df1e1d5f9b3ae5e00d715f7`.
+- A fresh local production build at 390×844 placed **Try it with sample data**
+  at `y=874.40625`, below the viewport.
+- The documented shared checkout returned the verifier's operator-gated 404.
+  It was not retried or changed: shared services are outside this work order.
+
+### Repairs
+
+- On phones the hero copy, including the sample action, now comes before the
+  artwork. The exact 390×844 check now measures the complete action at
+  `y=548.328125–602.328125`.
+- The release verifier now requires the exact full SHA in all three places:
+  `/health`, a cold service-worker cache, and the rendered footer. Its unit
+  suite rejects a stale footer identity as well as stale backend and worker
+  identities.
+- Family Pack purchase copy and the broken checkout link were removed. The
+  page honestly says hosted checkout is being set up, leaves Statue switch and
+  Colour chorus locked, and keeps the three core games free. This is the
+  closest useful behavior while the operator-owned checkout registration is
+  unavailable.
+- Stored inactive licenses now keep extra games locked and show the quiet,
+  visible status: “This license is no longer active. Extra games remain
+  locked.” Query tokens are stripped, the result is cached locally, and
+  verification goes only to Sociobot rather than the room API.
+- Added exact claims and regressions for the retained shared-TV canvas,
+  Point Panic controls, six-hour room retention, no advertising/analytics
+  scripts, minimal join data, unavailable checkout, and inactive licenses.
+  The prior demo, offline, privacy, remote, shared-phone, free-game, and
+  player-count claims remain covered.
+
+### Local verification
+
+- Clean dependency install: `npm ci` — 94 packages, 0 reported
+  vulnerabilities.
+- `npm test` passed: 5 Vitest tests, 5 release-verifier tests, and 19 Rust
+  unit/integration tests.
+- `npm run check`, `cargo fmt --all -- --check`, and
+  `cargo clippy --all-targets --locked -- -D warnings` passed.
+- `npm run build` passed. Before the immutable release-ID build, JavaScript
+  was 53.87 KB raw / 19.80 KB gzip and CSS 17.57 KB raw / 4.93 KB gzip.
+- `npm run test:browser` passed. It covers desktop and 390 px flows,
+  keyboard/D-pad, Axe WCAG 2/2.1 A/AA, demo isolation, real host/phone play,
+  invalid-room recovery, response policies, 404, rate limits, privacy capture,
+  offline reload, and service-worker caching.
+- Every exact command in `.factory/claims.json` passed independently, including
+  all 15 Playwright claim entry points and
+  `cargo test --locked claim_real_room_retention_expires_after_six_hours`.
+- `./scripts/deploy-container.sh --validate-only` confirms port 8080, durable
+  `/data`, and exactly one replica. The Dockerfile accepts the factory's build
+  SHA without `.git` and runs non-root.
+
+### Deployment and live proof
+
+Deploy only the clean committed checkout with
+`./scripts/deploy-container.sh`. The script builds that immutable SHA, retains
+the permitted `sf-living-room-lobby-data` mount at `/data`, keeps scale at 1/1,
+waits for its revision, then refuses success unless `/health`, a cold
+service-worker cache, and the footer all identify that exact SHA. The post-rollout
+command is also reproducible directly:
+
+```sh
+node scripts/verify-release.mjs "$(git rev-parse HEAD)" https://living-room-lobby.sociobot.in
+```
+
+### Environment limits
+
+No local Docker executable or repository `verify-url.sh` is available. The
+browser suite supplies the Axe accessibility smoke test; no physical smart-TV
+device was available, so Chromium remote-keyboard and 390 px mobile paths were
+used. No forbidden service, database, key vault, or unrelated product resource
+was read or changed.
+
+---
+
 # Living Room Lobby — verification 8 handoff
 
 ## Release status: FAIL

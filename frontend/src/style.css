@@ -110,6 +110,7 @@ legend { grid-column: 1/-1; margin-bottom: 10px; }
 .family-pack > div:first-child { max-width: 720px; }
 .pack-actions { display: grid; justify-items: center; gap: 12px; }
 .unlocked { padding: 20px; color: #11150f; background: var(--moss); font-weight: 900; }
+.license-status { max-width: 430px; margin: 0; padding: 14px 16px; border-left: 4px solid var(--warning); color: var(--ink); background: #312d1b; font-weight: 800; }
 .restore { width: min(100%, 430px); }
 .restore summary { min-height: 48px; padding: 12px; color: var(--lichen); text-align: center; text-decoration: underline; cursor: pointer; }
 .restore form { margin-top: 12px; padding: 18px; display: grid; gap: 10px; border: 2px solid #687168; }
@@ -216,7 +217,9 @@ footer a { min-width: 44px; min-height: 44px; padding: 6px; display: inline-flex
   .topbar nav a { min-height: 44px; }
   .network { font-size: .72rem; }
   .hero { padding: 24px 16px 56px; gap: 48px; }
-  .hero-art { margin-inline: -20px; border-inline: 0; box-shadow: none; transform: none; }
+  /* The first action must stay in the cold phone viewport: on a TV the art
+     balances the copy, while on a phone it follows the first decision. */
+  .hero-art { order: initial; margin-inline: -20px; border-inline: 0; box-shadow: none; transform: none; }
   .hero-art img { height: 32vh; min-height: 230px; object-fit: cover; }
   .hero-art figcaption { display: none; }
   .hero h1 { font-size: clamp(3.5rem, 18vw, 5.5rem); }
