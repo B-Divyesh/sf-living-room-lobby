@@ -1,5 +1,33 @@
 [
   {
+    "id": "shared-tv-phone-round",
+    "claim": "Party games work on one shared TV with a phone-optional player.",
+    "where": "landing first screen, README",
+    "test": "npm run test:browser -- --grep @claim:shared-tv-phone-round",
+    "sandbox": "Fresh TV-sized host and 390 px phone contexts create a real room, join with a shared phone, draw on the TV, and complete a Pass & Guess score."
+  },
+  {
+    "id": "join-code-path",
+    "claim": "Use the code shown on the TV or its join page to join a room.",
+    "where": "landing join section and host room screen",
+    "test": "npm run test:browser -- --grep @claim:join-code-path",
+    "sandbox": "Fresh host and phone contexts create a room, follow the rendered join-page URL, submit a display name, and assert that player appears on the host."
+  },
+  {
+    "id": "language-light-round",
+    "claim": "Choose Spanish instructions or picture prompts for a language-light round.",
+    "where": "site metadata, room language selector, README",
+    "test": "npm run test:browser -- --grep @claim:language-light-round",
+    "sandbox": "Fresh demo context changes the room to Spanish, plays and completes a translated Draw Together round, then verifies a picture-only prompt."
+  },
+  {
+    "id": "art-provenance",
+    "claim": "The footer discloses original AI-assisted artwork.",
+    "where": "footer",
+    "test": "node --test --test-name-pattern @claim:art-provenance scripts/product-contract.test.mjs",
+    "sandbox": "Source contract reads the rendered footer, design provenance record, and shipped hero asset."
+  },
+  {
     "id": "demo-sandbox",
     "claim": "Try it with sample data opens a ready Draw Together room in a separate 24-hour sample workspace.",
     "where": "landing first screen, demo banner, README",

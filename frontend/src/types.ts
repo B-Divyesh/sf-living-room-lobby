@@ -1,5 +1,6 @@
 export type GameId = 'draw' | 'point' | 'pass' | 'statue' | 'chorus';
 export type Stage = 'lobby' | 'playing' | 'results';
+export type RoomLanguage = 'en' | 'es' | 'picture';
 
 export interface Player {
   id: string;
@@ -24,6 +25,7 @@ export interface Room {
   stage: Stage;
   game: GameId | null;
   prompt: string;
+  language: RoomLanguage;
   round: number;
   players: Player[];
   drawing: StrokePoint[];

@@ -1,4 +1,4 @@
-import type { GameId, Room, Session, Stage, StrokePoint } from './types';
+import type { GameId, Room, RoomLanguage, Session, Stage, StrokePoint } from './types';
 import { demoMode, demoPlayerAction, loadDemoRoom, saveDemoRoom, sampleSession, updateDemoRoom } from './demo';
 
 const JSON_HEADERS = { 'content-type': 'application/json' };
@@ -37,7 +37,7 @@ export async function joinRoom(code: string, name: string, mode: 'solo' | 'share
   return { room: data.room, session: { role: 'player', code, token: data.token, playerId: data.playerId, name, mode } };
 }
 
-export async function hostUpdate(session: Session, update: { stage?: Stage; game?: GameId; prompt?: string; round?: number; resetRound?: boolean; message?: string }): Promise<Room> {
+export async function hostUpdate(session: Session, update: { stage?: Stage; game?: GameId; prompt?: string; language?: RoomLanguage; round?: number; resetRound?: boolean; message?: string }): Promise<Room> {
   if (demoMode() && session.code === 'DEMO') return updateDemoRoom(update);
   const data = await request<{ room: Room }>(`/api/rooms/${session.code}/host`, {
     method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ token: session.token, ...update }),

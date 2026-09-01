@@ -2,7 +2,7 @@ import QRCode from 'qrcode';
 import './style.css';
 import { createRoom, getRoom, hostUpdate, joinRoom, playerAction } from './api';
 import { DEMO_PATH, demoMode, discardDemo, loadDemoRoom, loadDemoSession, provisionDemoWorkspace, resetDemo, saveDemoSession } from './demo';
-import { games, nextPrompt, passPrompts } from './game-data';
+import { games, localizedPrompt, nextPrompt, passPrompts } from './game-data';
 import { cachedLicenseStatus, captureLicense, restoreLicense, verifyLicense } from './license';
 import type { LicenseStatus } from './license';
 import { releaseId } from './release';
@@ -97,7 +97,7 @@ function shell(content: string, page = 'game'): void {
 }
 
 function render(): void {
-  const path = location.pathname;
+  const path = demoMode() ? DEMO_PATH : location.pathname;
   const inDemo = demoMode();
   if (inDemo && !routeWasDemo) {
     room = loadDemoRoom();
@@ -120,21 +120,21 @@ function renderHome(): void {
     <section class="hero">
       <div class="hero-copy">
         <p class="eyebrow">Party games for one shared TV</p>
-        <h1>Play together<br><em>on your TV.</em></h1>
+        <h1>Play together <br><em>on your TV.</em></h1>
         <p class="lede">For families sharing one TV, these games let kids and relatives play without everyone needing a phone.</p>
         <div class="hero-actions">
           <a class="button primary" href="${DEMO_PATH}" data-nav>Try it with sample data <span aria-hidden="true">→</span></a>
           <button class="button secondary" id="host-room">Start a real room</button>
           <button class="button secondary" id="show-join">Join a room</button>
         </div>
-        <p class="action-explanation">See a ready Draw Together round with three sample families.</p>
+        <p class="action-explanation">See a ready Draw Together round with three sample players.</p>
         <ul class="plain-facts"><li>Try the sample without an account.</li><li>Sample play never changes a real room.</li><li>Extra games are not available yet.</li></ul>
         <p class="remote-hint"><kbd>↑</kbd><kbd>↓</kbd><kbd>OK</kbd> Use a TV remote to move and choose.</p>
       </div>
-      <figure class="hero-art"><picture><img src="/assets/lobby-hero.webp" width="1536" height="1024" alt="A cozy concrete living room with chairs, cushions, a shared phone and playful hands pointing at a television" fetchpriority="high" decoding="async"></picture><figcaption>One screen brings the room together.</figcaption></figure>
+      <figure class="hero-art"><picture><img src="/assets/lobby-hero.webp" width="1536" height="1024" alt="A cozy concrete living room with chairs, cushions, a shared phone and playful hands pointing at a television" fetchpriority="high" decoding="async"></picture><figcaption>The TV shows the game while players share or use phones.</figcaption></figure>
     </section>
     <section class="join-panel ${joinCode ? 'open' : ''}" id="join-panel" aria-labelledby="join-title">
-      <div><p class="step-number">01 / JOIN</p><h2 id="join-title">Enter the four marks</h2><p>Use the code shown on the TV.</p></div>
+      <div><h2 id="join-title">Enter the room code</h2><p>Use the code shown on the TV.</p></div>
       <form id="join-form">
         <label for="room-code">Room code</label>
         <input id="room-code" name="code" value="${escapeHtml(joinCode)}" inputmode="text" maxlength="4" autocomplete="off" required aria-describedby="join-error">
@@ -145,17 +145,18 @@ function renderHome(): void {
           <label class="radio-tile"><input type="radio" name="mode" value="shared"><span>Pass one phone</span></label>
         </fieldset>
         <p id="join-error" class="form-error" aria-live="polite"></p>
-        <button class="button primary" type="submit">Step into the lobby</button>
+        <button class="button primary" type="submit">Join room</button>
       </form>
     </section>
     <section class="how" aria-labelledby="how-title"><p class="eyebrow">Choose how to play</p><h2 id="how-title">Three ways to play</h2>
       <ol><li><b>TV remote</b><span>Host with arrows and OK.</span></li><li><b>Shared phone</b><span>Pass it after each turn.</span></li><li><b>Personal phone</b><span>Scan once.</span></li></ol>
     </section>
-    <section class="catalogue" aria-labelledby="games-title"><div><p class="eyebrow">Games with short prompts</p><h2 id="games-title">Choose a game</h2></div>
+    <section class="catalogue" aria-labelledby="games-title"><div><p class="eyebrow">Games</p><h2 id="games-title">Choose a game</h2></div>
       <p id="game-strip-help" class="sr-only">Use the left and right arrow keys to browse all free games.</p>
       <div class="game-strip" tabindex="0" role="region" aria-label="Free games" aria-describedby="game-strip-help">${games.slice(0, 3).map(gameCard).join('')}</div>
     </section>
-    <section class="family-pack" aria-labelledby="pack-title"><div><p class="eyebrow">Family Pack</p><h2 id="pack-title">Extra games are not available yet</h2><p>Hosted checkout is being set up. Statue switch and Colour chorus stay locked. Free games stay free.</p></div>
+    <section class="stored-info" aria-labelledby="stored-title"><p class="eyebrow">Privacy</p><h2 id="stored-title">What is stored</h2><ul><li>Real rooms keep names, scores, and game actions for up to six hours.</li><li>Sample data is isolated and expires after 24 hours.</li><li>A Family Pack license check stays in this browser.</li><li>The app does not load advertising or analytics scripts.</li></ul><a href="/privacy" data-nav>Read privacy details</a></section>
+    <section class="family-pack" aria-labelledby="pack-title"><div><p class="eyebrow">Family Pack</p><h2 id="pack-title">Extra games are not available yet</h2><p>Hosted checkout is being set up. Statue Switch and Colour Chorus stay locked. Free games stay free.</p></div>
       <div class="pack-actions">${unlocked ? '<p class="unlocked">✓ Family Pack unlocked on this device</p>' : `${licenseStatus === 'inactive' ? '<p class="license-status" role="status">This license is no longer active. Extra games remain locked.</p>' : ''}<details class="restore"><summary>Have a Family Pack license from an earlier purchase? Check it</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" required><button class="button secondary" type="submit" aria-label="Verify Family Pack license">Verify license</button></form></details>`}</div>
     </section>`, 'home');
   bindHome();
@@ -211,14 +212,20 @@ function renderHost(): void {
 }
 
 function renderHostLobby(): void {
-  shell(`<section class="room-heading"><div><p class="eyebrow">Lobby is open</p><h1>Room <em>${room!.code}</em></h1><p>Scan or visit this page and enter the code.</p></div><canvas id="qr" width="180" height="180" aria-label="QR code to join room ${room!.code}"></canvas></section>
+  const language = room!.language || 'en';
+  const joinUrl = `${location.origin}/?join=${room!.code}`;
+  shell(`<section class="room-heading"><div><p class="eyebrow">Lobby is open</p><h1>Room <em>${room!.code}</em></h1><p>Scan or visit this page and enter the code.</p><a class="join-link" href="${joinUrl}" id="room-join-link">Open the join page</a></div><canvas id="qr" width="180" height="180" aria-label="QR code to join room ${room!.code}"></canvas></section>
     <section class="lobby-grid"><div><div class="section-title"><h2>Who’s in the room?</h2><span>${room!.players.length} / 12</span></div>
       <div class="players ${room!.players.length ? '' : 'empty'}">${room!.players.length ? room!.players.map(playerPebble).join('') : '<div class="empty-state"><span aria-hidden="true">○</span><h3>The floor is open</h3><p>Players appear here as they join. One phone can stand for a whole family.</p></div>'}</div></div>
-      <div><div class="section-title"><h2>Choose the first game</h2></div><div class="game-choices">${games.map((game) => `<button class="choice ${game.paid && !unlocked ? 'locked' : ''}" data-game="${game.id}" ${game.paid && !unlocked ? 'aria-describedby="paid-note"' : ''}><span aria-hidden="true">${game.icon}</span><b>${game.name}</b><small>${game.strap} · ${game.players}</small>${game.paid && !unlocked ? '<i>Family Pack</i>' : ''}</button>`).join('')}</div><p id="paid-note" class="sr-only">Requires the one-time Family Pack</p></div></section>
+      <div><div class="section-title"><h2>Choose the first game</h2></div><div class="language-choice"><label for="room-language">Language and prompts</label><select id="room-language"><option value="en" ${language === 'en' ? 'selected' : ''}>English</option><option value="es" ${language === 'es' ? 'selected' : ''}>Español</option><option value="picture" ${language === 'picture' ? 'selected' : ''}>Picture prompts (no words)</option></select><p>Spanish translates host and phone instructions. Picture prompts use symbols instead of words.</p></div><div class="game-choices">${games.map((game) => `<button class="choice ${game.paid && !unlocked ? 'locked' : ''}" data-game="${game.id}" ${game.paid && !unlocked ? 'aria-describedby="paid-note"' : ''}><span aria-hidden="true">${game.icon}</span><b>${game.name}</b><small>${game.strap} · ${game.players}</small>${game.paid && !unlocked ? '<i>Family Pack</i>' : ''}</button>`).join('')}</div><p id="paid-note" class="sr-only">Requires the one-time Family Pack</p></div></section>
     <div class="command-rail"><button class="button secondary" id="leave-room">Close room</button><p>${room!.players.some((p) => p.mode === 'shared') ? '↻ Shared-phone player ready' : 'Tip: choose “Pass one phone” when joining with kids.'}</p></div>`, 'host');
-  const joinUrl = `${location.origin}/?join=${room!.code}`;
   void QRCode.toCanvas(document.querySelector('#qr') as HTMLCanvasElement, joinUrl, { width: 180, margin: 1, color: { dark: '#151a17', light: '#f5f3e8' } });
   document.querySelectorAll<HTMLButtonElement>('[data-game]').forEach((button) => button.addEventListener('click', () => void startGame(button.dataset.game as GameId)));
+  document.querySelector<HTMLSelectElement>('#room-language')?.addEventListener('change', async (event) => {
+    const language = (event.currentTarget as HTMLSelectElement).value as Room['language'];
+    try { room = await hostUpdate(session!, { language, message: 'Room language changed' }); render(); }
+    catch (error) { errorMessage = message(error); render(); }
+  });
   document.querySelector('#leave-room')?.addEventListener('click', leaveRoom);
 }
 
@@ -237,13 +244,15 @@ function renderHostGame(): void {
   const game = room!.game!;
   const info = games.find((item) => item.id === game)!;
   let stage = '';
-  if (game === 'draw') stage = `<div class="tv-prompt"><p>Draw this together</p><strong>${room!.prompt}</strong></div><canvas class="tv-canvas" id="tv-canvas" width="1000" height="560" aria-label="The players’ shared drawing"></canvas>`;
-  if (game === 'point') stage = `<div class="tv-prompt compact"><p>Aim at the moss target, then tap</p><strong>POINT!</strong></div><div class="point-arena"><span class="target" style="left:${room!.targetX}%;top:${room!.targetY}%" role="img" aria-label="Moss target"></span>${room!.players.map((p) => `<span class="pointer" style="left:${p.x}%;top:${p.y}%;--player:${p.color}" title="${escapeHtml(p.name)}">${escapeHtml(p.name.slice(0, 1))}</span>`).join('')}</div>`;
+  const copy = gameCopy(room!.language || 'en');
+  const prompt = escapeHtml(localizedPrompt(room!.prompt, room!.language || 'en'));
+  if (game === 'draw') stage = `<div class="tv-prompt"><p>${copy.drawTogether}</p><strong class="game-prompt">${prompt}</strong></div><canvas class="tv-canvas" id="tv-canvas" width="1000" height="560" aria-label="The players’ shared drawing"></canvas>`;
+  if (game === 'point') stage = `<div class="tv-prompt compact"><p>${copy.aim}</p><strong>POINT!</strong></div><div class="point-arena"><span class="target" style="left:${room!.targetX}%;top:${room!.targetY}%" role="img" aria-label="Moss target"></span>${room!.players.map((p) => `<span class="pointer" style="left:${p.x}%;top:${p.y}%;--player:${p.color}" title="${escapeHtml(p.name)}">${escapeHtml(p.name.slice(0, 1))}</span>`).join('')}</div>`;
   if (game === 'pass') stage = `<div class="tv-prompt"><p>Keep the clue on the phone</p><strong>ACT · POINT · SOUND</strong><span>Pass after every guess</span></div>${scoreboard()}`;
   if (game === 'statue') stage = `<div class="tv-prompt"><p>Make this shape with your whole body</p><strong>${room!.prompt}</strong><span>Freeze together. The host awards the cheer.</span></div>${scoreboard()}`;
   if (game === 'chorus') stage = `<div class="tv-prompt"><p>Tap the colour on the beat</p><strong class="chorus-mark">● &nbsp; ● &nbsp; ●</strong><span>Listen to the room, not a language.</span></div>${scoreboard()}`;
-  shell(`<section class="play-header"><div><p class="eyebrow">Round ${room!.round + 1}</p><h1>${info.icon} ${info.name}</h1></div><p>${room!.players.length} playing</p></section><section class="tv-stage">${stage}</section>
-    <div class="command-rail"><button class="button secondary" id="end-game">Back to games</button><p>Use <kbd>←</kbd><kbd>→</kbd> to move · <kbd>OK</kbd> to choose</p><button class="button primary" id="next-round">Next round</button></div>`, 'play');
+  shell(`<section class="play-header"><div><p class="eyebrow">${copy.round} ${room!.round + 1}</p><h1>${info.icon} ${info.name}</h1></div><p>${room!.players.length} playing</p></section><section class="tv-stage">${stage}</section>
+    <div class="command-rail"><button class="button secondary" id="end-game">${copy.back}</button><p>Use <kbd>←</kbd><kbd>→</kbd> to move · <kbd>OK</kbd> to choose</p><button class="button primary" id="next-round">${copy.next}</button></div>`, 'play');
   if (game === 'draw') paintDrawing(document.querySelector('#tv-canvas') as HTMLCanvasElement, room!.drawing);
   document.querySelector('#end-game')?.addEventListener('click', async () => { room = await hostUpdate(session!, { stage: 'lobby', message: 'Choose another game' }); render(); });
   document.querySelector('#next-round')?.addEventListener('click', nextRound);
@@ -270,12 +279,14 @@ function renderPlayer(): void {
 
 function renderPhoneGame(): void {
   const game = room!.game!;
+  const copy = gameCopy(room!.language || 'en');
+  const prompt = escapeHtml(localizedPrompt(room!.prompt, room!.language || 'en'));
   let content = '';
-  if (game === 'draw') content = `<p class="eyebrow">Draw together</p><h1>Draw <em>${room!.prompt}</em></h1><p>Use one finger. Your colour joins everyone else on the TV.</p><canvas class="draw-pad" id="draw-pad" width="700" height="700" aria-label="Drawing pad"></canvas><button class="button secondary" id="clear-local">Clear my pad</button>`;
-  if (game === 'point') content = `<p class="eyebrow">Point panic</p><h1>Aim at <em>the moss ring</em></h1><p>Tilt your phone, or use the arrow pad. Then tap Point.</p><button class="button secondary" id="motion">Turn on tilt</button><div class="dpad" aria-label="Direction pad"><button data-move="up" aria-label="Move up">↑</button><button data-move="left" aria-label="Move left">←</button><button data-move="down" aria-label="Move down">↓</button><button data-move="right" aria-label="Move right">→</button></div><button class="button primary giant" id="score-point">POINT!</button>`;
-  if (game === 'pass') content = passScreen ? `<div class="pass-screen"><span aria-hidden="true">↻</span><h1>Pass the phone</h1><p>Keep the answer covered. Hand it to the next player.</p><button class="button primary" id="next-person">I have it</button></div>` : `<p class="eyebrow">Act · point · make a sound</p><h1 class="secret-prompt">${passPrompts[localPrompt % passPrompts.length]}</h1><p>Help the room guess. Don’t say the word!</p><div class="split-actions"><button class="button secondary" id="pass-card">Pass</button><button class="button primary" id="got-card">Got it +1</button></div>`;
-  if (game === 'statue') content = `<p class="eyebrow">Statue switch</p><h1>${room!.prompt}</h1><p>Put the phone down, make the shape, and freeze.</p><button class="button primary giant" id="frozen">I’m frozen</button>`;
-  if (game === 'chorus') content = `<p class="eyebrow">Colour chorus</p><h1>Tap together</h1><p>Choose a colour and make a three-beat rhythm with the room.</p><div class="colour-beats"><button style="--beat:#ff8a5b" aria-label="Clay beat">●</button><button style="--beat:#82c7d8" aria-label="Sky beat">●</button><button style="--beat:#b7d43d" aria-label="Moss beat">●</button></div><p class="beat-count" aria-live="polite" id="beat-count">0 beats</p>`;
+  if (game === 'draw') content = `<p class="eyebrow">${copy.drawTogether}</p><h1>${copy.draw} <em>${prompt}</em></h1><p>${copy.drawHelp}</p><canvas class="draw-pad" id="draw-pad" width="700" height="700" aria-label="Drawing pad"></canvas><button class="button secondary" id="clear-local">${copy.clear}</button>`;
+  if (game === 'point') content = `<p class="eyebrow">Point Panic</p><h1>${copy.aim} <em>${copy.ring}</em></h1><p>${copy.pointHelp}</p><button class="button secondary" id="motion">${copy.tilt}</button><div class="dpad" aria-label="Direction pad"><button data-move="up" aria-label="Move up">↑</button><button data-move="left" aria-label="Move left">←</button><button data-move="down" aria-label="Move down">↓</button><button data-move="right" aria-label="Move right">→</button></div><button class="button primary giant" id="score-point">POINT!</button>`;
+  if (game === 'pass') content = passScreen ? `<div class="pass-screen"><span aria-hidden="true">↻</span><h1>${room!.language === 'es' ? 'Pasa el teléfono' : 'Pass the phone'}</h1><p>${room!.language === 'es' ? 'Mantén la respuesta tapada. Entrégalo a otra persona.' : 'Keep the answer covered. Hand it to the next player.'}</p><button class="button primary" id="next-person">${room!.language === 'es' ? 'Ya lo tengo' : 'I have it'}</button></div>` : `<p class="eyebrow">${room!.language === 'es' ? 'Actúa · señala · haz un sonido' : 'Act · point · make a sound'}</p><h1 class="secret-prompt">${escapeHtml(localizedPrompt(passPrompts[localPrompt % passPrompts.length], room!.language || 'en'))}</h1><p>${room!.language === 'es' ? 'Ayuda a que adivinen. No digas la palabra.' : 'Help the room guess. Don’t say the word!'}</p><div class="split-actions"><button class="button secondary" id="pass-card">${room!.language === 'es' ? 'Pasa' : 'Pass'}</button><button class="button primary" id="got-card">${room!.language === 'es' ? 'Adivinó +1' : 'Got it +1'}</button></div>`;
+  if (game === 'statue') content = `<p class="eyebrow">Statue Switch</p><h1>${room!.prompt}</h1><p>Put the phone down, make the shape, and freeze.</p><button class="button primary giant" id="frozen">I’m frozen</button>`;
+  if (game === 'chorus') content = `<p class="eyebrow">Colour Chorus</p><h1>Tap together</h1><p>Choose a colour and make a three-beat rhythm with the room.</p><div class="colour-beats"><button style="--beat:#ff8a5b" aria-label="Clay beat">●</button><button style="--beat:#82c7d8" aria-label="Sky beat">●</button><button style="--beat:#b7d43d" aria-label="Moss beat">●</button></div><p class="beat-count" aria-live="polite" id="beat-count">0 beats</p>`;
   shell(`<section class="phone-game">${content}<p class="look-up">TV says: round ${room!.round + 1}</p></section>`, 'phone');
   bindPhoneGame(game);
 }
@@ -349,7 +360,7 @@ function setupPointing(): void {
 
 function renderLegal(kind: 'Privacy' | 'Terms'): void {
   const privacy = `<p><strong>Effective 1 September 2026</strong></p><p>Living Room Lobby works without accounts. A room stores its display names, game actions, and scores for up to six hours, then expires. The app does not load advertising or analytics scripts.</p><h2>Sample data</h2><p>A demo visit creates an isolated sample workspace that expires after 24 hours. Sample play never changes a real room.</p><h2>On your device</h2><p>A room session stays in session storage. A Family Pack license and its last check stay in local storage. You can clear either in browser settings.</p><h2>Family Pack licenses</h2><p>If you choose Verify license, your browser sends that token to Sociobot for a result. Our room API is not used for that check.</p><h2>Children</h2><p>The join form asks only for a display name and play mode. It does not ask for an email address, birth date, voice, photo, or location.</p><h2>Questions</h2><p>Email privacy@sociobot.in.</p>`;
-  const terms = `<p><strong>Effective 1 September 2026</strong></p><p>Living Room Lobby provides casual local party games as-is. Use it lawfully and supervise young players around screens and devices.</p><h2>Family Pack</h2><p>Family Pack checkout is not available yet. Statue switch and Colour chorus remain locked. If you have an earlier license, you can check it. An inactive license does not unlock extra games. Core games stay free.</p><h2>Fair play</h2><p>Do not disrupt rooms, automate requests, probe other room codes, or upload harmful content. Rooms and display names are temporary.</p><h2>Availability</h2><p>TV browsers vary. We aim for broad compatibility but cannot promise every browser or network will work without interruption.</p><h2>Contact</h2><p>Email support@sociobot.in.</p>`;
+  const terms = `<p><strong>Effective 1 September 2026</strong></p><p>Living Room Lobby provides casual local party games as-is. Use it lawfully and supervise young players around screens and devices.</p><h2>Family Pack</h2><p>Family Pack checkout is not available yet. Statue Switch and Colour Chorus remain locked. If you have an earlier license, you can check it. An inactive license does not unlock extra games. Core games stay free.</p><h2>Fair play</h2><p>Do not disrupt rooms, automate requests, probe other room codes, or upload harmful content. Rooms and display names are temporary.</p><h2>Availability</h2><p>TV browsers vary. We aim for broad compatibility but cannot promise every browser or network will work without interruption.</p><h2>Contact</h2><p>Email support@sociobot.in.</p>`;
   shell(`<article class="legal"><p class="eyebrow">The plain-language version</p><h1>${kind}</h1>${kind === 'Privacy' ? privacy : terms}<a class="button secondary" href="/" data-nav>Back to the lobby</a></article>`, 'legal');
 }
 
@@ -419,8 +430,17 @@ function setRouteMetadata(path: string): void {
     : path === '/privacy' ? 'Privacy — Living Room Lobby'
       : path === '/terms' ? 'Terms — Living Room Lobby'
         : 'Living Room Lobby — party games for your TV';
+  const description = path === DEMO_PATH ? 'Try a ready Living Room Lobby sample game with no account.'
+    : path === '/privacy' ? 'Read what Living Room Lobby stores and where it sends requests.'
+      : path === '/terms' ? 'Read the Living Room Lobby terms for family party games.'
+        : 'Phone-optional, language-light party games made for the living-room TV.';
   document.title = title;
   document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', `${location.origin}${path}`);
+  document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description);
+  document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', title);
+  document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', description);
+  document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]')?.setAttribute('content', title);
+  document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', description);
 }
 
 function focusRouteHeading(): void {
@@ -429,7 +449,26 @@ function focusRouteHeading(): void {
     if (!heading) return;
     heading.tabIndex = -1;
     heading.focus({ preventScroll: true });
+    const status = document.querySelector<HTMLElement>('#route-status');
+    if (status) status.textContent = `${heading.textContent?.replace(/\s+/g, ' ').trim()} page`;
   });
+}
+function gameCopy(language: Room['language'] | undefined): Record<string, string> {
+  if (language === 'es') return {
+    drawTogether: 'Dibujen juntos', draw: 'Dibuja', drawHelp: 'Usa un dedo. Tu color aparece en la TV.', clear: 'Borrar mi dibujo',
+    aim: 'Apunta al', ring: 'aro verde', pointHelp: 'Inclina el teléfono o usa las flechas. Luego toca Punto.', tilt: 'Activar inclinación',
+    round: 'Ronda', back: 'Volver a los juegos', next: 'Siguiente ronda',
+  };
+  if (language === 'picture') return {
+    drawTogether: 'Draw together', draw: 'Draw', drawHelp: 'Use one finger. Your colour joins everyone else on the TV.', clear: 'Clear my pad',
+    aim: 'Aim at', ring: 'the moss ring', pointHelp: 'Tilt your phone, or use the arrow pad. Then tap Point.', tilt: 'Turn on tilt',
+    round: 'Round', back: 'Back to games', next: 'Next round',
+  };
+  return {
+    drawTogether: 'Draw together', draw: 'Draw', drawHelp: 'Use one finger. Your colour joins everyone else on the TV.', clear: 'Clear my pad',
+    aim: 'Aim at', ring: 'the moss ring', pointHelp: 'Tilt your phone, or use the arrow pad. Then tap Point.', tilt: 'Turn on tilt',
+    round: 'Round', back: 'Back to games', next: 'Next round',
+  };
 }
 function message(error: unknown): string { return error instanceof Error ? error.message : 'Something went wrong. Try again.'; }
 function escapeHtml(value: string): string { return value.replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]!); }

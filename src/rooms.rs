@@ -149,6 +149,8 @@ struct InternalRoom {
     stage: String,
     game: Option<String>,
     prompt: String,
+    #[serde(default = "default_language")]
+    language: String,
     round: u32,
     players: Vec<InternalPlayer>,
     drawing: Vec<StrokePoint>,
@@ -186,6 +188,7 @@ struct PublicRoom<'a> {
     stage: &'a str,
     game: &'a Option<String>,
     prompt: &'a str,
+    language: &'a str,
     round: u32,
     players: Vec<PublicPlayer<'a>>,
     drawing: &'a [StrokePoint],
@@ -214,6 +217,7 @@ impl InternalRoom {
             stage: &self.stage,
             game: &self.game,
             prompt: &self.prompt,
+            language: &self.language,
             round: self.round,
             players: self
                 .players
@@ -249,9 +253,14 @@ struct HostRequest {
     stage: Option<String>,
     game: Option<String>,
     prompt: Option<String>,
+    language: Option<String>,
     round: Option<u32>,
     reset_round: Option<bool>,
     message: Option<String>,
+}
+
+fn default_language() -> String {
+    "en".into()
 }
 
 #[derive(Deserialize)]
@@ -311,6 +320,7 @@ async fn create_room(
             stage: "lobby".into(),
             game: None,
             prompt: String::new(),
+            language: default_language(),
             round: 0,
             players: vec![],
             drawing: vec![],
@@ -366,7 +376,8 @@ fn sample_room() -> InternalRoom {
         revision: 1,
         stage: "playing".into(),
         game: Some("draw".into()),
-        prompt: "BIRTHDAY CAKE".into(),
+        prompt: "🎂 BIRTHDAY CAKE".into(),
+        language: default_language(),
         round: 2,
         players: vec![
             InternalPlayer {
@@ -585,6 +596,14 @@ async fn host_update(
     if let Some(prompt) = input.prompt {
         room.prompt = prompt.chars().take(60).collect();
     }
+    if let Some(language) = input.language {
+        if !["en", "es", "picture"].contains(&language.as_str()) {
+            return Err(ApiError::bad(
+                "Choose English, Spanish, or picture prompts.",
+            ));
+        }
+        room.language = language;
+    }
     if let Some(round) = input.round {
         room.round = round.min(99);
     }
@@ -771,6 +790,7 @@ mod tests {
             stage: "lobby".into(),
             game: None,
             prompt: "".into(),
+            language: default_language(),
             round: 0,
             players: vec![InternalPlayer {
                 id: "1".into(),

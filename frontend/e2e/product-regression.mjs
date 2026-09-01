@@ -240,6 +240,10 @@ async function checkDesignedNotFound(browser) {
     await page.getByRole('heading', { name: 'That page is not here.' }).waitFor();
     await page.getByRole('link', { name: 'Go to Living Room Lobby' }).waitFor();
     assert.equal(await page.locator('main').count(), 1);
+    assert.equal(await page.locator('header').count(), 1);
+    assert.equal(await page.locator('footer').count(), 1);
+    assert.equal(await page.locator('link[rel="canonical"]').count(), 1);
+    assert.equal(await page.locator('meta[property="og:image"]').count(), 1);
   } finally {
     await context.close();
   }
@@ -287,6 +291,110 @@ async function checkMobileFirstViewport(browser) {
       action.y >= 0 && action.y + action.height <= 844,
       `The sample action must fit the cold 390×844 viewport, but occupied y=${action.y}–${action.y + action.height}.`,
     );
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkDesktopFirstViewport(browser) {
+  for (const viewport of [{ width: 1366, height: 768 }, { width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+    try {
+      await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+      const action = await page.getByRole('link', { name: /Try it with sample data/ }).boundingBox();
+      assert.ok(action, `The sample action was not rendered at ${viewport.width}×${viewport.height}.`);
+      assert.ok(action.y >= 0 && action.y + action.height <= viewport.height,
+        `The sample action must fit ${viewport.width}×${viewport.height}, but occupied y=${action.y}–${action.y + action.height}.`);
+    } finally {
+      await context.close();
+    }
+  }
+}
+
+async function checkPromptRailGeometry(browser) {
+  for (const viewport of [{ width: 1366, height: 768 }, { width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+    try {
+      await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+      const prompt = await page.locator('.game-prompt').boundingBox();
+      const rail = await page.locator('.command-rail').boundingBox();
+      assert.ok(prompt && rail, `The prompt or command rail was missing at ${viewport.width}×${viewport.height}.`);
+      assert.ok(prompt.y >= 0 && prompt.y + prompt.height <= rail.y,
+        `The longest sample prompt must stay above the command rail at ${viewport.width}×${viewport.height}; prompt y=${prompt.y}–${prompt.y + prompt.height}, rail starts ${rail.y}.`);
+      const clipped = await page.locator('.game-prompt').evaluate((element) => element.scrollWidth > element.clientWidth);
+      assert.equal(clipped, false, `The longest sample prompt must keep whole words at ${viewport.width}×${viewport.height}.`);
+    } finally {
+      await context.close();
+    }
+  }
+}
+
+async function checkSpanishPictureRound(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  page.setDefaultTimeout(4_000);
+  try {
+    await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
+    await page.locator('#end-game').click();
+    await page.locator('#room-language').selectOption('es');
+    await page.locator('[data-game="draw"]').click();
+    await page.getByText('Dibujen juntos').waitFor();
+    await page.evaluate(() => sessionStorage.setItem('demo:living-room-lobby:session', JSON.stringify({
+      role: 'player', code: 'DEMO', token: 'demo-player-demo-asha', playerId: 'demo-asha', name: 'Asha', mode: 'solo',
+    })));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.getByText('Usa un dedo. Tu color aparece en la TV.').waitFor();
+    const pad = await page.locator('#draw-pad').boundingBox();
+    assert.ok(pad, 'The Spanish sample player did not receive a drawing pad.');
+    await page.mouse.move(pad.x + 40, pad.y + 40); await page.mouse.down(); await page.mouse.move(pad.x + 130, pad.y + 130); await page.mouse.up();
+    await page.evaluate(() => sessionStorage.setItem('demo:living-room-lobby:session', JSON.stringify({ role: 'host', code: 'DEMO', token: 'demo-host-token' })));
+    await page.reload({ waitUntil: 'networkidle' });
+    const beforeRound = await page.evaluate(() => JSON.parse(localStorage.getItem('demo:living-room-lobby:room') || '{}').round);
+    await page.locator('#next-round').click();
+    await page.waitForTimeout(200);
+    const afterRound = await page.evaluate(() => JSON.parse(localStorage.getItem('demo:living-room-lobby:room') || '{}').round);
+    assert.equal(afterRound, beforeRound + 1, `The translated round did not advance: ${beforeRound} → ${afterRound}.`);
+    await page.locator('#end-game').click();
+    await page.locator('#room-language').selectOption('picture');
+    await page.locator('[data-game="draw"]').click();
+    assert.equal(await page.locator('.game-prompt').textContent(), '🐈', 'Picture prompts must not require reading.');
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkJoinCodePath(browser) {
+  const hostContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const phoneContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const host = await hostContext.newPage(); const phone = await phoneContext.newPage();
+  try {
+    await host.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    await host.locator('#host-room').click();
+    const joinUrl = await host.locator('#room-join-link').getAttribute('href');
+    assert.match(joinUrl || '', /\?join=[A-Z0-9]{4}$/);
+    await phone.goto(joinUrl, { waitUntil: 'networkidle' });
+    await phone.locator('#player-name').fill('Marta');
+    await phone.locator('#join-form button[type="submit"]').click();
+    await phone.getByRole('heading', { name: 'Nice, Marta.' }).waitFor();
+    await host.getByText('Marta').waitFor();
+  } finally {
+    await hostContext.close(); await phoneContext.close();
+  }
+}
+
+async function checkRouteAnnouncement(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    await page.getByLabel('Primary').getByRole('link', { name: 'Privacy' }).click();
+    await page.getByRole('heading', { name: 'Privacy' }).waitFor();
+    assert.equal(await page.locator('#route-status').textContent(), 'Privacy page');
+    await page.goBack();
+    await page.getByRole('heading', { name: /Play together/i }).waitFor();
+    assert.match(await page.locator('#route-status').textContent() || '', /Play together on your TV\. page/);
   } finally {
     await context.close();
   }
@@ -635,6 +743,8 @@ const server = spawn(resolve(root, 'target/debug/living-room-lobby'), [], {
   stdio: 'pipe',
 });
 let serverError = '';
+let serverExited = false;
+const serverExit = new Promise((resolveExit) => server.once('exit', () => { serverExited = true; resolveExit(undefined); }));
 server.stderr.on('data', (chunk) => { serverError += String(chunk); });
 
 try {
@@ -647,7 +757,12 @@ try {
     if (included('@claim:demo-real-room-isolation') || !grep) await checkDemoRealRoomIsolation(browser);
     if (included('@regression:mobile-a11y') || !grep) await checkMobileCatalogueAndPointA11y(browser);
     if (included('@regression:mobile-first-viewport') || !grep) await checkMobileFirstViewport(browser);
-    if (included('@regression:core-room-flow') || !grep) await checkCoreRoomFlow(browser);
+    if (included('@regression:desktop-first-viewport') || !grep) await checkDesktopFirstViewport(browser);
+    if (included('@regression:prompt-rail-geometry') || !grep) await checkPromptRailGeometry(browser);
+    if (included('@claim:language-light-round') || !grep) await checkSpanishPictureRound(browser);
+    if (included('@claim:join-code-path') || !grep) await checkJoinCodePath(browser);
+    if (included('@regression:route-announcement') || !grep) await checkRouteAnnouncement(browser);
+    if (included('@regression:core-room-flow') || included('@claim:shared-tv-phone-round') || !grep) await checkCoreRoomFlow(browser);
     if (included('@regression:shared-room-store') || !grep) await checkSharedRoomReads();
     if (included('@regression:room-create-limit') || !grep) await checkRoomCreationLimit();
     if (included('@regression:api-rate-limit') || !grep) await checkDemoApiLimit();
@@ -669,7 +784,13 @@ try {
   }
 } finally {
   server.kill('SIGINT');
-  await new Promise((resolveExit) => server.once('exit', resolveExit));
+  // A local Windows-compatible signal shim can acknowledge SIGINT without
+  // closing the child. Do not leave a verification command hanging forever.
+  await Promise.race([serverExit, delay(2_000)]);
+  if (!serverExited) {
+    server.kill('SIGKILL');
+    await Promise.race([serverExit, delay(2_000)]);
+  }
   await rm(workDir, { recursive: true, force: true });
 }
 

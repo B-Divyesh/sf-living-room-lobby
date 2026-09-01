@@ -1,93 +1,54 @@
 # Living Room Lobby
 
-Living Room Lobby brings phone-optional party games to a smart-TV browser. It
-is for multigenerational families sharing one screen.
+Play phone-optional party games together on one shared TV. It is for families
+with kids and relatives who may share a phone.
 
-Open [/demo](/demo) or choose **Try it with sample data** on the landing page
-to see a ready Draw Together round with Asha, Marcos, and Lee and Bo. A demo
-visit gets its own 24-hour sample workspace. Playable state uses
-`demo:living-room-lobby:` browser storage and is discarded by **Start for
-real**. It never uses or changes a real room.
+Try the ready sample at [living-room-lobby.sociobot.in/demo](https://living-room-lobby.sociobot.in/demo).
+It opens a Draw Together round with Asha, Marcos, and Lee and Bo. The demo
+saves progress in this browser. **Start for real** clears that sample progress.
 
-The free room includes:
+Choose Spanish instructions or picture prompts when a player does not read
+English. Use the room code or the join page shown by the TV to add a player.
 
-- **Draw together:** every connected phone contributes to one TV canvas.
-- **Point panic:** tilt a phone or use the accessible arrow pad to aim.
-- **Pass & guess:** one shared phone moves around the room after every clue.
+## Run locally
 
-Family Pack checkout is not available yet. Statue switch and Colour chorus stay
-locked while checkout registration is completed. Draw together, Point panic,
-and Pass & guess remain free. If you have an earlier Family Pack license, you
-can paste it into the app to check its status.
-
-## Architecture
-
-- Vite + strict TypeScript, with no UI framework or hosted assets
-- Rust 2021, Axum, and SQLite via SQLx
-- HTTP polling for old WebKit/Chromium TV browsers
-- Room state and server-side rate-limit buckets in SQLite at `/data/lobby.db`
-- One container serves the compiled frontend and API on `PORT`
-
-## Develop
-
-Requirements: Node 22+, npm, and Rust 1.85+.
+Install dependencies, then use two terminals:
 
 ```sh
-npm install
-npm run dev          # frontend on :5173, proxies API to :8080
-npm run dev:server   # backend on :8080 in another shell
-npm run check
+npm ci
+npm run dev:server
+```
+
+```sh
+npm run dev
+```
+
+Open the local address printed by Vite. The one-click sample is at `/demo`.
+
+## Test and build
+
+```sh
 npm test
-npm run test:browser  # production-browser, keyboard, Axe, offline, and privacy checks
-npm run build        # reproducible frontend output in dist/
+npm run check
+npm run test:browser
+npm run build
 ```
 
-The server defaults to `sqlite:///data/lobby.db?mode=rwc` when `/data` exists,
-falling back to `sqlite://data/lobby.db?mode=rwc` for a standalone binary.
-Override with `DATABASE_URL`; set `PORT` to change the default `8080`. Set
-`VITE_BILLING_BASE` only when building against the factory’s staging license
-verification API.
+Each visitor-facing claim and its clean-sandbox command is listed in
+[`.factory/claims.json`](.factory/claims.json).
 
-## Container
+## Deploy
+
+Run the checked-in deployment command from a clean committed checkout with the
+factory deployment access:
 
 ```sh
-docker build --build-arg BUILD_SHA="$(git rev-parse HEAD)" -t living-room-lobby .
-docker run --rm -p 8080:8080 -v lobby-data:/data living-room-lobby
+./scripts/deploy-container.sh
 ```
 
-Open `http://localhost:8080`. The production image runs as an unprivileged
-user and starts with only `PORT` configured. `BUILD_SHA` defaults to `dev` for
-plain local builds; the factory supplies the full immutable commit SHA during
-its tarball build, and the compiled `/health` response identifies that release.
+## Privacy and terms
 
-For the factory deployment, run `./scripts/deploy-container.sh` from a clean,
-committed checkout with Azure access. Its checked-in
-`.factory/container-app.json` requires the durable `/data` mount and fixes both
-replica counts at one. Room state and per-client limits use the SQLite file at
-that path. Do not scale this deployment until those stores are replaced by
-shared services. The script tags the image with the full source commit, passes
-that same value as `BUILD_SHA`, waits for the exact revision to become ready,
-then checks uncached `/health` and a new service-worker cache before reporting
-success. It aborts if `/data` is no longer the `sf-living-room-lobby-data`
-mount or scale is no longer exactly one replica.
+Read the live [Privacy page](https://living-room-lobby.sociobot.in/privacy)
+and [Terms page](https://living-room-lobby.sociobot.in/terms).
 
-## Testing and accessibility
-
-`npm test` runs prompt/catalogue tests and Rust API room-flow tests. `npm run
-test:browser` starts a clean local product server and verifies desktop and 390
-px flows, keyboard/remote controls, Axe WCAG 2 A/AA checks, real host/phone
-play, immediate room reads, demo privacy, and a cold-cache offline reload. The
-claim commands live in [`.factory/claims.json`](.factory/claims.json) and all
-start from the demo route.
-
-The UI has a skip link, one page-level heading, labelled controls, visible
-focus, a keyboard-scrollable mobile game catalogue, a remote D-pad navigation
-path, 44 px navigation targets, reduced-motion behavior, and offline feedback.
-
-## Privacy and license
-
-See `/privacy` and `/terms` in the running application. Family Pack license
-tokens and the last verification result remain in the browser’s local storage.
-
-MIT licensed. Generated-image provenance and visual tokens are documented in
-[`.factory/design.md`](.factory/design.md).
+[License](LICENSE) · [Design and image provenance](.factory/design.md)

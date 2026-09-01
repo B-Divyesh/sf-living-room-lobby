@@ -42,7 +42,8 @@ export function sampleRoom(): Room {
     revision: 1,
     stage: 'playing',
     game: 'draw',
-    prompt: 'BIRTHDAY CAKE',
+    prompt: '🎂 BIRTHDAY CAKE',
+    language: 'en',
     round: 2,
     players: clone(samplePlayers),
     drawing: clone(sampleDrawing),
@@ -123,12 +124,13 @@ export async function provisionDemoWorkspace(force = false): Promise<Room | null
 }
 
 export function updateDemoRoom(update: {
-  stage?: Room['stage']; game?: GameId; prompt?: string; round?: number; resetRound?: boolean; message?: string;
+  stage?: Room['stage']; game?: GameId; prompt?: string; language?: Room['language']; round?: number; resetRound?: boolean; message?: string;
 }): Room {
   const room = loadDemoRoom();
   if (update.stage) room.stage = update.stage;
   if (update.game) room.game = update.game;
   if (update.prompt !== undefined) room.prompt = update.prompt.slice(0, 60);
+  if (update.language !== undefined) room.language = update.language;
   if (update.round !== undefined) room.round = Math.min(99, Math.max(0, update.round));
   if (update.message !== undefined) room.message = update.message.slice(0, 100);
   if (update.resetRound) {
