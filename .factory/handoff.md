@@ -1,6 +1,6 @@
 # Living Room Lobby repair handoff
 
-## Status: ready for the checked-in container deployment
+## Status: PASS — deployed and publicly verified
 
 This repair addresses every release blocker in independent verification 11 and
 the controller's follow-up review without changing the researched product
@@ -64,12 +64,19 @@ Performed from a clean `npm ci` install:
 
 ## Deployment and live proof
 
-Run `./scripts/deploy-container.sh` from this clean committed checkout. It
-builds `sociobotregistry.azurecr.io/sf-living-room-lobby:<commit>`, preserves a
-room through the one-replica `/data` handover, waits for the exact ready
-revision, and then runs `scripts/verify-release.mjs`. That verifier rejects a
-stale backend, service worker, footer, or JavaScript asset and exercises an
-independent desktop-host/390 px shared-phone join after deployment.
+The checked-in deployment completed from a clean committed checkout using the
+product's one-replica `/data` configuration. It built the scoped
+`sociobotregistry.azurecr.io/sf-living-room-lobby:<commit>` image, retained a
+probe room across the handover, and ran `scripts/verify-release.mjs` against
+the public origin. That public gate confirmed the same immutable identity in
+`/health`, the service-worker cache, footer, and JavaScript asset, then
+completed an independent desktop-host/390 px shared-phone join after reload.
+
+The final public 390×844 / 200% text check also passed on both Home and Demo:
+each document measured 390 px wide, each h1 fit its 358 px content column, and
+every visible interactive target was at least 44×44 px. The privacy-details
+link measured 304.14×53 px. Run `./scripts/deploy-container.sh` again only for
+a later committed change; it repeats the same identity and durable-state gate.
 
 ## Known gaps
 
