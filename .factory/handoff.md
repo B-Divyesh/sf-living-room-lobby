@@ -2,9 +2,9 @@
 
 ## Status
 
-Repair ready for the container deployment command. The old public release was
-reproduced before this repair; the deployment command now makes a public
-identity gate the final action and exits non-zero on any mismatch.
+Deployed through the public identity gate. The old public release was
+reproduced before this repair; the deployment command now makes that gate the
+final action and exits non-zero on any mismatch.
 
 ## Repair
 
@@ -60,6 +60,24 @@ Its final `release-gate` output is the deployment evidence. It includes the
 candidate, health build, worker cache, emitted shell asset, footer identity,
 and retained 390 px shared-phone room. It fails instead of handing off if any
 public identity is older than the candidate.
+
+## First successful live rollout evidence
+
+Before this handoff update, the repaired product artifact
+`120358616803c5c548b006a196ed7199ae5ce49d` passed the public gate at
+`https://living-room-lobby.sociobot.in`:
+
+- `/health`, footer, and emitted JavaScript all reported
+  `120358616803c5c548b006a196ed7199ae5ce49d`.
+- The cold browser cache was
+  `living-room-lobby-120358616803c5c548b006a196ed7199ae5ce49d`; the shell was
+  `/assets/index-DH1B4F4-.js`.
+- A desktop host retained a 390 px shared-phone player after both pages
+  reloaded (`room WX7B`).
+- `/opt/fleet/lib/verify-url.sh` returned HTTP 200 with no console errors; it
+  found title, `lang=en`, one h1, a main landmark, and no missing image alt or
+  unlabeled buttons. The health response was `no-store`, the worker was
+  revalidated, and the hashed shell was immutable.
 
 ## Known gaps
 
