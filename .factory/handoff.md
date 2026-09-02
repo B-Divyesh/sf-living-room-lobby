@@ -23,6 +23,9 @@ SQLite backend, sample workspace, and free games.
   **304.14×53 px**. Evidence: `repair-12-before-390-200.png`,
   `repair-12-home-390-200.png`, and `repair-12-demo-390-200.png` in
   `.factory/evidence/`.
+- The browser suite builds its UI with a 40-character immutable test identity,
+  so text-resize coverage also catches a long release id in the footer. Footer
+  identity text now wraps safely rather than enlarging the page.
 - Added `@regression:mobile-text-resize-reflow`. It opens both Home and Demo
   in fresh touch-enabled 390×844 contexts, forces 200% root text, asserts no
   document overflow or clipped heading, verifies the hero does not hide

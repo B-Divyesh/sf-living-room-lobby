@@ -7,7 +7,7 @@
     "dev": "vite --config frontend/vite.config.ts",
     "dev:server": "cargo run",
     "test": "vitest run --config frontend/vite.config.ts && node --test scripts/*.test.mjs && cargo test",
-    "test:browser": "npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs",
+    "test:browser": "VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs",
     "test:live": "node scripts/verify-release.mjs",
     "build": "vite build --config frontend/vite.config.ts",
     "check": "tsc -p frontend/tsconfig.json --noEmit && cargo check"

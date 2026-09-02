@@ -201,6 +201,7 @@ legend { grid-column: 1/-1; margin-bottom: 10px; }
 .legal strong { color: var(--ink); }
 .legal .button { margin-top: 40px; }
 footer { min-height: 100px; padding: 24px 4vw; display: flex; justify-content: space-between; gap: 24px; color: var(--muted); border-top: 1px solid #687168; font-size: .8rem; }
+footer p { overflow-wrap: anywhere; }
 footer a { min-width: 44px; min-height: 44px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; }
 .toast { position: fixed; z-index: 50; right: 20px; bottom: -180px; max-width: min(420px, calc(100vw - 40px)); padding: 18px 22px; border: 3px solid var(--danger); color: var(--ink); background: #381d1b; box-shadow: 7px 7px #080a09; transition: bottom 220ms ease; }
 .toast.show { bottom: 116px; }
