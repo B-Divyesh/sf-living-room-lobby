@@ -1,0 +1,314 @@
+GATE npm test
+
+> living-room-lobby@1.0.0 test
+> vitest run --config frontend/vite.config.ts && node --test scripts/*.test.mjs && cargo test
+
+
+ RUN  v4.1.11 /work/repo/frontend
+
+
+ Test Files  2 passed (2)
+      Tests  6 passed (6)
+   Start at  05:53:40
+   Duration  519ms (transform 166ms, setup 0ms, import 197ms, tests 47ms, environment 0ms)
+
+TAP version 13
+# Subtest: @claim:art-provenance the footer disclosure matches the shipped original asset record
+ok 1 - @claim:art-provenance the footer disclosure matches the shipped original asset record
+  ---
+  duration_ms: 33.384277
+  type: 'test'
+  ...
+# Subtest: README links to the live demo instead of a GitHub-relative path
+ok 2 - README links to the live demo instead of a GitHub-relative path
+  ---
+  duration_ms: 4.876982
+  type: 'test'
+  ...
+# Subtest: review 2 copy is plain, result-focused, and does not restore deployment promises
+ok 3 - review 2 copy is plain, result-focused, and does not restore deployment promises
+  ---
+  duration_ms: 37.89386
+  type: 'test'
+  ...
+# Subtest: reproduces verification 14 and rejects every stale public identity surface
+ok 4 - reproduces verification 14 and rejects every stale public identity surface
+  ---
+  duration_ms: 3.357488
+  type: 'test'
+  ...
+# Subtest: accepts only one exact full candidate identity
+ok 5 - accepts only one exact full candidate identity
+  ---
+  duration_ms: 0.359598
+  type: 'test'
+  ...
+# Subtest: release gate rejects an invalid candidate before it can wait on a live URL
+ok 6 - release gate rejects an invalid candidate before it can wait on a live URL
+  ---
+  duration_ms: 0.374299
+  type: 'test'
+  ...
+# Subtest: rejects a footer that does not identify the exact candidate
+ok 7 - rejects a footer that does not identify the exact candidate
+  ---
+  duration_ms: 0.249499
+  type: 'test'
+  ...
+# Subtest: rejects JavaScript that does not identify the exact candidate
+ok 8 - rejects JavaScript that does not identify the exact candidate
+  ---
+  duration_ms: 0.274799
+  type: 'test'
+  ...
+# Subtest: rejects the verifier-reproduced recovery envelope and a lost host player
+ok 9 - rejects the verifier-reproduced recovery envelope and a lost host player
+  ---
+  duration_ms: 0.607098
+  type: 'test'
+  ...
+# Subtest: deployment cannot report success before exact live identity verification
+ok 10 - deployment cannot report success before exact live identity verification
+  ---
+  duration_ms: 10.091863
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 798.665355
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.14s
+     Running unittests src/main.rs (target/debug/deps/living_room_lobby-e8547f6d57394c35)
+
+running 21 tests
+test rooms::tests::claim_player_count_limits_are_enforced_at_every_boundary ... ok
+test rooms::tests::claim_real_room_retention_expires_after_six_hours ... ok
+test rooms::tests::every_room_api_route_has_a_per_connection_rate_limit ... ok
+test rooms::tests::host_and_phone_share_durable_room_state_between_app_instances ... ok
+test rooms::tests::missing_room_join_returns_a_recovery_payload_without_a_404 ... ok
+test rooms::tests::player_count_rules_accept_and_reject_the_exact_boundaries ... ok
+test rooms::tests::public_room_never_serializes_player_tokens ... ok
+test rooms::tests::room_creation_is_limited_per_forwarded_connection ... ok
+test rooms::tests::two_app_instances_can_read_the_same_room_from_one_sqlite_store ... ok
+test tests::cache_policy_keeps_hashed_assets_immutable_and_shell_revalidated ... ok
+test tests::create_join_read_and_play_room_flow ... ok
+test tests::current_schema_starts_without_a_noop_migration_write ... ok
+test tests::default_database_uses_data_mount_before_local_fallback ... ok
+test tests::demo_route_seeds_an_isolated_twenty_four_hour_workspace ... ok
+test tests::durable_network_volume_uses_the_lock_free_sqlite_vfs ... ok
+test tests::empty_database_recovery_preserves_the_partial_migration_files ... ok
+test tests::health_has_release_security_and_cache_policy ... ok
+test tests::health_reports_build ... ok
+test tests::startup_pool_keeps_one_sqlite_connection_for_the_durable_share ... ok
+test tests::startup_waits_for_a_durable_database_lock ... ok
+test tests::unknown_routes_use_the_styled_404_recovery_page ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.48s
+
+GATE_RESULT 0 npm test
+GATE npm run check
+
+> living-room-lobby@1.0.0 check
+> tsc -p frontend/tsconfig.json --noEmit && cargo check
+
+    Checking libc v0.2.189
+   Compiling zerofrom v0.1.8
+   Compiling stable_deref_trait v1.2.1
+    Checking pin-project-lite v0.2.17
+   Compiling yoke v0.8.3
+    Checking futures-core v0.3.34
+    Checking cfg-if v1.0.4
+   Compiling zerovec v0.11.8
+    Checking itoa v1.0.18
+    Checking bytes v1.12.1
+    Checking smallvec v1.15.2
+    Checking futures-sink v0.3.34
+    Checking once_cell v1.21.4
+   Compiling tinystr v0.8.4
+    Checking errno v0.3.14
+   Compiling litemap v0.8.3
+   Compiling writeable v0.6.4
+   Compiling icu_locale_core v2.3.0
+    Checking signal-hook-registry v1.4.8
+    Checking tracing-core v0.1.36
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+    Checking serde_core v1.0.229
+    Checking socket2 v0.6.5
+    Checking mio v1.2.2
+    Checking memchr v2.8.3
+   Compiling utf8_iter v1.0.4
+   Compiling icu_collections v2.3.0
+    Checking tokio v1.53.1
+   Compiling icu_provider v2.3.1
+   Compiling zeroize v1.9.0
+   Compiling scopeguard v1.2.0
+   Compiling typenum v1.20.1
+    Checking log v0.4.34
+   Compiling generic-array v0.14.7
+   Compiling lock_api v0.4.14
+   Compiling rustls-pki-types v1.15.1
+    Checking getrandom v0.2.17
+   Compiling icu_normalizer_data v2.3.0
+   Compiling icu_properties_data v2.3.0
+    Checking futures-io v0.3.34
+    Checking slab v0.4.12
+    Checking futures-task v0.3.34
+    Checking futures-util v0.3.34
+   Compiling icu_properties v2.3.0
+   Compiling icu_normalizer v2.3.0
+    Checking tracing v0.1.44
+    Checking serde v1.0.229
+   Compiling percent-encoding v2.3.2
+   Compiling untrusted v0.9.0
+   Compiling equivalent v1.0.2
+   Compiling ring v0.17.14
+   Compiling form_urlencoded v1.2.2
+   Compiling idna_adapter v1.2.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling parking_lot_core v0.9.12
+    Checking http v1.5.0
+   Compiling foldhash v0.1.5
+   Compiling allocator-api2 v0.2.21
+   Compiling hashbrown v0.15.5
+    Checking http-body v1.1.0
+   Compiling parking_lot v0.12.5
+   Compiling digest v0.10.7
+   Compiling idna v1.1.0
+   Compiling rustls-webpki v0.103.15
+   Compiling webpki-roots v1.0.9
+   Compiling crossbeam-utils v0.8.22
+    Checking zmij v1.0.23
+   Compiling crc-catalog v2.5.0
+   Compiling parking v2.2.1
+   Compiling hashbrown v0.17.1
+   Compiling cpufeatures v0.2.17
+   Compiling subtle v2.6.1
+   Compiling rustls v0.23.43
+   Compiling sha2 v0.10.9
+   Compiling indexmap v2.14.0
+   Compiling event-listener v5.4.2
+   Compiling crc v3.4.0
+   Compiling serde_json v1.0.151
+   Compiling crossbeam-queue v0.3.13
+   Compiling webpki-roots v0.26.11
+   Compiling url v2.5.8
+   Compiling futures-intrusive v0.5.0
+   Compiling hashlink v0.10.0
+   Compiling tokio-stream v0.1.19
+   Compiling either v1.18.0
+   Compiling thiserror v2.0.20
+   Compiling num-traits v0.2.19
+   Compiling spin v0.9.9
+    Checking futures-channel v0.3.34
+    Checking tower-service v0.3.3
+   Compiling base64 v0.22.1
+   Compiling ryu v1.0.23
+   Compiling serde_urlencoded v0.7.1
+   Compiling sqlx-core v0.8.6
+   Compiling flume v0.11.1
+   Compiling atoi v2.0.0
+   Compiling futures-executor v0.3.34
+   Compiling libsqlite3-sys v0.30.1
+    Checking httpdate v1.0.3
+    Checking tower-layer v0.3.3
+   Compiling unicase v2.9.0
+    Checking mime v0.3.17
+   Compiling mime_guess v2.0.5
+   Compiling sqlx-sqlite v0.8.6
+    Checking zerocopy v0.8.56
+    Checking httparse v1.10.1
+    Checking http-body-util v0.1.5
+    Checking sync_wrapper v1.0.2
+    Checking regex-syntax v0.8.11
+    Checking atomic-waker v1.1.2
+   Compiling sqlx-macros-core v0.8.6
+    Checking hyper v1.11.0
+    Checking regex-automata v0.4.18
+    Checking ppv-lite86 v0.2.21
+    Checking rand_core v0.6.4
+    Checking lazy_static v1.5.0
+    Checking sharded-slab v0.1.7
+    Checking axum-core v0.4.5
+    Checking rand_chacha v0.3.1
+    Checking matchers v0.2.0
+    Checking hyper-util v0.1.20
+   Compiling sqlx-macros v0.8.6
+    Checking tower v0.5.3
+    Checking tracing-serde v0.2.0
+    Checking tracing-log v0.2.0
+    Checking tokio-util v0.7.19
+    Checking serde_path_to_error v0.1.20
+    Checking thread_local v1.1.10
+    Checking bitflags v2.13.1
+    Checking http-range-header v0.4.2
+    Checking matchit v0.7.3
+    Checking nu-ansi-term v0.50.3
+    Checking tracing-subscriber v0.3.23
+    Checking axum v0.7.9
+    Checking tower-http v0.6.11
+    Checking sqlx v0.8.6
+    Checking rand v0.8.8
+    Checking living-room-lobby v1.0.0 (/work/repo)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 23s
+GATE_RESULT 0 npm run check
+GATE cargo fmt --all -- --check
+GATE_RESULT 0 cargo fmt --all -- --check
+GATE cargo clippy --all-targets --locked -- -D warnings
+    Checking living-room-lobby v1.0.0 (/work/repo)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.93s
+GATE_RESULT 0 cargo clippy --all-targets --locked -- -D warnings
+GATE ./scripts/deploy-container.sh --validate-only
+valid container deployment: Dockerfile on port 8080, data at /data, one replica
+GATE_RESULT 0 ./scripts/deploy-container.sh --validate-only
+GATE npm run build
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-m_cu-gE_.js   57.98 kB │ gzip: 21.19 kB │ map: 211.44 kB
+
+✓ built in 131ms
+GATE_RESULT 0 npm run build
+GATE npm run test:browser
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 122ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.17s
+Browser regression checks passed.
+GATE_RESULT 0 npm run test:browser
+GATE npm run test:live -- 5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2 https://living-room-lobby.sociobot.in
+
+> living-room-lobby@1.0.0 test:live
+> node scripts/release-gate.mjs 5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2 https://living-room-lobby.sociobot.in
+
+{"gate":"passed","candidate":"5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2","build":"5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2","cache":"living-room-lobby-5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2","asset":"/assets/index-D7uU5jl5.js","footer":"Party games for one shared TV. Privacy · TermsOriginal AI-assisted artwork · Built by Param Factory · 5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2","room":{"code":"KG3F","playerId":"oTY2vJ5y","viewport":"390x844","retainedAfterReload":true}}
+GATE_RESULT 0 npm run test:live -- 5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2 https://living-room-lobby.sociobot.in

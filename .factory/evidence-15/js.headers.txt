@@ -1,0 +1,14 @@
+HTTP/2 200 
+content-type: text/javascript
+accept-ranges: bytes
+last-modified: Wed, 02 Sep 2026 05:16:02 GMT
+content-length: 58025
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://api.sociobot.in https://pilot-api.sociobot.in; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.sociobot.in https://pilot-api.sociobot.in; worker-src 'self'; manifest-src 'self'
+strict-transport-security: max-age=31536000; includeSubDomains
+permissions-policy: accelerometer=(self), camera=(), geolocation=(), gyroscope=(self), microphone=(), payment=(), usb=()
+cache-control: public, max-age=31536000, immutable
+date: Wed, 02 Sep 2026 06:06:28 GMT
+

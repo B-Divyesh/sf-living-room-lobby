@@ -1,0 +1,19 @@
+{
+  "fetchTime": "2026-09-02T06:07:44.493Z",
+  "categories": {
+    "performance": 1,
+    "accessibility": 1,
+    "best-practices": 1,
+    "seo": 1
+  },
+  "metrics": {
+    "fcp": "1.2 s",
+    "lcp": "1.3 s",
+    "si": "1.2 s",
+    "tbt": "50 ms",
+    "cls": "0",
+    "tti": "1.4 s",
+    "inp": null
+  },
+  "warnings": []
+}

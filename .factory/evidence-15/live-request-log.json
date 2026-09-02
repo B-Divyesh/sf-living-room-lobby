@@ -1,0 +1,45 @@
+{
+  "requests": [
+    {
+      "method": "GET",
+      "url": "https://living-room-lobby.sociobot.in/demo",
+      "resourceType": "document",
+      "authorization": false
+    },
+    {
+      "method": "GET",
+      "url": "https://living-room-lobby.sociobot.in/assets/lobby-hero.webp",
+      "resourceType": "image",
+      "authorization": false
+    },
+    {
+      "method": "GET",
+      "url": "https://living-room-lobby.sociobot.in/assets/index-D7uU5jl5.js",
+      "resourceType": "script",
+      "authorization": false
+    },
+    {
+      "method": "GET",
+      "url": "https://living-room-lobby.sociobot.in/assets/index-B2lU5tGs.css",
+      "resourceType": "stylesheet",
+      "authorization": false
+    },
+    {
+      "method": "POST",
+      "url": "https://living-room-lobby.sociobot.in/api/demo",
+      "resourceType": "fetch",
+      "authorization": false
+    },
+    {
+      "method": "POST",
+      "url": "https://living-room-lobby.sociobot.in/api/demo",
+      "resourceType": "fetch",
+      "authorization": false
+    }
+  ],
+  "origins": [
+    "https://living-room-lobby.sociobot.in"
+  ],
+  "external": [],
+  "authorizationRequests": []
+}

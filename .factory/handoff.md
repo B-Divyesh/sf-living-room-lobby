@@ -1,86 +1,45 @@
-# Living Room Lobby repair 14 handoff
+# Living Room Lobby verification 15 handoff
 
 ## Status
 
-Deployed through the public identity gate. The old public release was
-reproduced before this repair; the deployment command now makes that gate the
-final action and exits non-zero on any mismatch.
+**PASS — candidate `5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2` is
+ready for release at `https://living-room-lobby.sociobot.in`.**
 
-## Repair
+Fresh public evidence resolves verification 14’s deployment-only blocker:
+`/health`, footer, emitted JavaScript, and the service-worker cache now identify
+the requested candidate. Candidate-built JS and CSS are byte-for-byte equal to
+the live files.
 
-- Reproduced verification 14 on 2 September 2026: the requested candidate was
-  `46e5c90a59020178fa492c03a2ecb17209d7be34`, while uncached `/health`
-  returned `98b506e1632464092cdc4e9add8c3b33265c1d53`.
-- The same cold fetch found old shell `/assets/index-BOEZBkgG.js`, old
-  JavaScript identity, and worker cache
-  `living-room-lobby-98b506e1632464092cdc4e9add8c3b33265c1d53`.
-  Compact reproduction evidence is in
-  `.factory/evidence/repair-14-before-health.json`,
-  `.factory/evidence/repair-14-before-health.headers.txt`, and
-  `.factory/evidence/repair-14-before-identity.txt`.
-- Added `scripts/release-gate.mjs`. It uses fresh public requests and browser
-  contexts to require the candidate in `/health`, service-worker source,
-  emitted JavaScript, cold worker cache, and footer before running the real
-  desktop-host/390 px shared-phone check.
-- `scripts/deploy-container.sh` runs that gate only after it has built the
-  committed SHA, stopped the old revision, checked the ready image, durable
-  `/data` mount, scale boundary, and durable-room handover.
-- Regression coverage now names the exact candidate and stale identities from
-  verification 14 and proves each stale public identity surface is rejected.
+## What was verified
 
-## Verification
+- All 20 `.factory/claims.json` commands pass after `npm ci`.
+- `npm test`, `npm run check`, Rust format/Clippy, deployment validation,
+  candidate frontend build, release backend build, full browser regression,
+  and the live release gate pass.
+- The one-click sample, real TV host/shared-phone join, Spanish round, reload
+  persistence, 12-player boundary, invalid-input recovery, concurrent reads,
+  offline reload, keyboard/D-pad control, reduced motion, desktop/390 px
+  layouts, and all public routes pass.
+- Axe found zero violations. Mobile Lighthouse scored 100 in performance,
+  accessibility, best practices, and SEO (LCP 1.3 s; TBT 50 ms; CLS 0).
+- Sample traffic stayed same-origin and credential-free. Security and cache
+  headers pass.
+- Live API limits are 40 requests/second (`Retry-After: 1`) and 12 room
+  creations/minute (`Retry-After: 60`). Both returned `429` immediately after
+  their allowance.
+- A 100 req/s health smoke completed with no errors or timeouts. A separate
+  100-request concurrent room-read smoke returned 100/100 `200`.
 
-From a clean install:
+Full evidence and commands are in `.factory/verification-15.md` and
+`.factory/evidence-15/`.
 
-```sh
-npm ci
-npm test
-npm run check
-cargo fmt --all -- --check
-cargo clippy --all-targets --locked -- -D warnings
-./scripts/deploy-container.sh --validate-only
-npm run build
-npm run test:browser
-```
+## Defects
 
-The repair run passed the Vitest suite (6 tests), Node contract/release suite
-(10 tests), Rust tests, TypeScript/Rust checks, formatting, Clippy with warnings
-denied, production frontend build, deployment-configuration validation, and
-the desktop/TV/390 px browser suite. The browser suite covers keyboard/remote,
-Axe, offline reload/update, privacy requests, demo isolation, rate limits, and
-a real shared-phone flow.
+No critical, high, medium, or low defects were found.
 
-Deploy a committed checkout with:
+## Coverage limits
 
-```sh
-./scripts/deploy-container.sh
-```
-
-Its final `release-gate` output is the deployment evidence. It includes the
-candidate, health build, worker cache, emitted shell asset, footer identity,
-and retained 390 px shared-phone room. It fails instead of handing off if any
-public identity is older than the candidate.
-
-## First successful live rollout evidence
-
-Before this handoff update, the repaired product artifact
-`120358616803c5c548b006a196ed7199ae5ce49d` passed the public gate at
-`https://living-room-lobby.sociobot.in`:
-
-- `/health`, footer, and emitted JavaScript all reported
-  `120358616803c5c548b006a196ed7199ae5ce49d`.
-- The cold browser cache was
-  `living-room-lobby-120358616803c5c548b006a196ed7199ae5ce49d`; the shell was
-  `/assets/index-DH1B4F4-.js`.
-- A desktop host retained a 390 px shared-phone player after both pages
-  reloaded (`room WX7B`).
-- `/opt/fleet/lib/verify-url.sh` returned HTTP 200 with no console errors; it
-  found title, `lang=en`, one h1, a main landmark, and no missing image alt or
-  unlabeled buttons. The health response was `no-store`, the worker was
-  revalidated, and the hashed shell was immutable.
-
-## Known gaps
-
-Physical Samsung Tizen, LG webOS, Fire TV Silk, and device-orientation hardware
-remain unavailable. Chromium covers TV viewport, 390 px touch, keyboard/remote,
-reduced motion, and offline behavior.
+Physical Samsung Tizen, LG webOS, Fire TV Silk, and real orientation hardware
+were unavailable. Docker is not installed in the verifier container; both
+Dockerfile build stages were run directly, the deployment contract validator
+passed, and the public artifact matched the candidate.

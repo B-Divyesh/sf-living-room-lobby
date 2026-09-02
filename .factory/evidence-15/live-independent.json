@@ -1,0 +1,761 @@
+{
+  "candidate": "5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2",
+  "base": "https://living-room-lobby.sociobot.in",
+  "checkedAt": "2026-09-02T06:05:46.334Z",
+  "http": {
+    "health": {
+      "build": "5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2",
+      "status": "ok"
+    },
+    "shellStatus": 200,
+    "jsPath": "/assets/index-D7uU5jl5.js",
+    "cssPath": "/assets/index-B2lU5tGs.css",
+    "bytes": {
+      "javascript": 58025,
+      "css": 19170,
+      "hero": 108076,
+      "serviceWorker": 1648
+    },
+    "cacheControl": {
+      "shell": "no-cache, must-revalidate",
+      "health": "no-store",
+      "serviceWorker": "no-cache, must-revalidate",
+      "javascript": "public, max-age=31536000, immutable",
+      "css": "public, max-age=31536000, immutable"
+    },
+    "security": {
+      "csp": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://api.sociobot.in https://pilot-api.sociobot.in; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.sociobot.in https://pilot-api.sociobot.in; worker-src 'self'; manifest-src 'self'",
+      "hsts": "max-age=31536000; includeSubDomains",
+      "permissionsPolicy": "accelerometer=(self), camera=(), geolocation=(), gyroscope=(self), microphone=(), payment=(), usb=()",
+      "referrerPolicy": "strict-origin-when-cross-origin",
+      "contentTypeOptions": "nosniff",
+      "frameOptions": "DENY"
+    },
+    "discovery": {
+      "manifest": 200,
+      "robots": 200,
+      "sitemap": 200
+    }
+  },
+  "desktop": {
+    "firstRead": {
+      "title": "Living Room Lobby — party games for your TV",
+      "lang": "en",
+      "h1": [
+        "Play together on your TV."
+      ],
+      "audience": "For families sharing one TV, these games let kids and relatives play without everyone needing a phone.",
+      "primary": "Try it with sample data →",
+      "primaryExplanation": "See a ready Draw Together round with three sample players.",
+      "mainCount": 1
+    },
+    "axeViolations": 0,
+    "demoAxeViolations": 0,
+    "focus": {
+      "text": "Skip to the game",
+      "href": "#main",
+      "outlineStyle": "solid",
+      "outlineWidth": "4px",
+      "outlineColor": "rgb(183, 212, 61)"
+    },
+    "requestCount": 5,
+    "requestOrigins": [
+      "https://living-room-lobby.sociobot.in"
+    ],
+    "storage": {
+      "local": [
+        "demo:living-room-lobby:room"
+      ],
+      "session": [
+        "demo:living-room-lobby:workspace",
+        "demo:living-room-lobby:session"
+      ],
+      "cookies": ""
+    }
+  },
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "title": "Living Room Lobby — party games for your TV",
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "canonical": "https://living-room-lobby.sociobot.in/",
+      "description": "Phone-optional, language-light party games made for the living-room TV.",
+      "ogImage": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+    },
+    {
+      "path": "/demo",
+      "status": 200,
+      "title": "Demo — Living Room Lobby",
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "canonical": "https://living-room-lobby.sociobot.in/demo",
+      "description": "Try a ready Living Room Lobby sample game with no account.",
+      "ogImage": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+    },
+    {
+      "path": "/privacy",
+      "status": 200,
+      "title": "Privacy — Living Room Lobby",
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "canonical": "https://living-room-lobby.sociobot.in/privacy",
+      "description": "Read what Living Room Lobby stores and where it sends requests.",
+      "ogImage": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+    },
+    {
+      "path": "/terms",
+      "status": 200,
+      "title": "Terms — Living Room Lobby",
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "canonical": "https://living-room-lobby.sociobot.in/terms",
+      "description": "Read the Living Room Lobby terms for family party games.",
+      "ogImage": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+    },
+    {
+      "path": "/missing-verification-15",
+      "status": 404,
+      "title": "Page not found — Living Room Lobby",
+      "h1": 1,
+      "main": 1,
+      "lang": "en",
+      "canonical": "https://living-room-lobby.sociobot.in/404",
+      "description": "Return to Living Room Lobby party games for one shared TV.",
+      "ogImage": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+    }
+  ],
+  "links": [
+    {
+      "url": "https://living-room-lobby.sociobot.in/demo#main",
+      "status": 200
+    },
+    {
+      "url": "https://living-room-lobby.sociobot.in/",
+      "status": 200
+    },
+    {
+      "url": "https://living-room-lobby.sociobot.in/demo",
+      "status": 200
+    },
+    {
+      "url": "https://living-room-lobby.sociobot.in/privacy",
+      "status": 200
+    },
+    {
+      "url": "https://living-room-lobby.sociobot.in/terms",
+      "status": 200
+    }
+  ],
+  "mobile": {
+    "axeViolations": 0,
+    "layout": {
+      "innerWidth": 390,
+      "scrollWidth": 390,
+      "targets": [
+        {
+          "tag": "A",
+          "text": "Skip to the game",
+          "width": 152,
+          "height": 44
+        },
+        {
+          "tag": "A",
+          "text": "LR Living Room Lobby",
+          "width": 185,
+          "height": 44
+        },
+        {
+          "tag": "A",
+          "text": "Demo",
+          "width": 55,
+          "height": 44
+        },
+        {
+          "tag": "A",
+          "text": "Privacy",
+          "width": 66,
+          "height": 44
+        },
+        {
+          "tag": "A",
+          "text": "Try it with sample data →",
+          "width": 358,
+          "height": 54
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Start a real room",
+          "width": 358,
+          "height": 54
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Join a room",
+          "width": 358,
+          "height": 54
+        },
+        {
+          "tag": "DIV",
+          "text": "✎Draw TogetherEveryone draws on one shared TV picture.2–10 players◎Point PanicAi",
+          "width": 390,
+          "height": 292
+        },
+        {
+          "tag": "A",
+          "text": "Read privacy details",
+          "width": 160,
+          "height": 44
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Verify a Family Pack license",
+          "width": 358,
+          "height": 48
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "width": 318,
+          "height": 58
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Verify license",
+          "width": 318,
+          "height": 54
+        },
+        {
+          "tag": "A",
+          "text": "Privacy",
+          "width": 54,
+          "height": 44
+        },
+        {
+          "tag": "A",
+          "text": "Terms",
+          "width": 47,
+          "height": 44
+        }
+      ],
+      "undersized": []
+    }
+  },
+  "reducedMotion": [
+    {
+      "tag": "HTML",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "HEAD",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "LINK",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "LINK",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "LINK",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "LINK",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "LINK",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "META",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "TITLE",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "SCRIPT",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "LINK",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "BODY",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "A",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "P",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "DIV",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "ASIDE",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "B",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "SPAN",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "DIV",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "BUTTON",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "BUTTON",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "HEADER",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "A",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "SPAN",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "NAV",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "A",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "A",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "DIV",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "I",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "MAIN",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "SECTION",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "DIV",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "P",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "H1",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "P",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "SECTION",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "DIV",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "P",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "STRONG",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "CANVAS",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "DIV",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "BUTTON",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "P",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "KBD",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "KBD",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "KBD",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "BUTTON",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "FOOTER",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "P",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "A",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "A",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "P",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    },
+    {
+      "tag": "DIV",
+      "transition": "1e-05s",
+      "animation": "1e-05s",
+      "iteration": "1"
+    }
+  ],
+  "offline": {
+    "cacheBefore": [
+      "living-room-lobby-5aa0299dc151b2ee16ac10be6f2e07be20a7bfd2"
+    ],
+    "heading": "✎ DRAW TOGETHER",
+    "banner": "Demo — sample data, nothing is saved to a real room\nSample workspace expires after 24 hours.\nReset demo\nStart for real"
+  },
+  "realRoom": {
+    "code": "JT98",
+    "sharedPhoneJoined": true,
+    "spanishRound": true,
+    "hostAndPhoneRetainedAfterReload": true
+  },
+  "boundaries": {
+    "roomCode": "TZYU",
+    "joins": [
+      {
+        "index": 1,
+        "status": 200
+      },
+      {
+        "index": 2,
+        "status": 200
+      },
+      {
+        "index": 3,
+        "status": 200
+      },
+      {
+        "index": 4,
+        "status": 200
+      },
+      {
+        "index": 5,
+        "status": 200
+      },
+      {
+        "index": 6,
+        "status": 200
+      },
+      {
+        "index": 7,
+        "status": 200
+      },
+      {
+        "index": 8,
+        "status": 200
+      },
+      {
+        "index": 9,
+        "status": 200
+      },
+      {
+        "index": 10,
+        "status": 200
+      },
+      {
+        "index": 11,
+        "status": 200
+      },
+      {
+        "index": 12,
+        "status": 200
+      },
+      {
+        "index": 13,
+        "status": 400
+      }
+    ],
+    "invalidName": 400,
+    "invalidMode": 400,
+    "invalidHost": 401,
+    "invalidRead": 404,
+    "concurrentReadStatuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ]
+  },
+  "rateLimit": {
+    "endpoint": "POST /api/demo",
+    "attempted": 45,
+    "statusCounts": {
+      "200": 40,
+      "429": 5
+    },
+    "retryAfter": [
+      "1"
+    ]
+  },
+  "consoleAndPageErrors": []
+}

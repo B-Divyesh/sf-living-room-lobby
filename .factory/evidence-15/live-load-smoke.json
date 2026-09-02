@@ -1,0 +1,9 @@
+{
+  "room": "78R2",
+  "concurrentRequests": 100,
+  "elapsedMs": 5072,
+  "statusCounts": {
+    "200": 100
+  },
+  "requestsPerSecond": 19.7
+}

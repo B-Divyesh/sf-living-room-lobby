@@ -1,0 +1,11 @@
+{
+  "endpoint": "POST /api/rooms",
+  "attempted": 13,
+  "statusCounts": {
+    "200": 12,
+    "429": 1
+  },
+  "retryAfter": [
+    "60"
+  ]
+}
