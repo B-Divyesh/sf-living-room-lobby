@@ -110,6 +110,24 @@ async function checkDemoSandbox(browser) {
   } finally {
     await context.close();
   }
+
+  const aliasContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const aliasPage = await aliasContext.newPage();
+  const aliasRequests = [];
+  aliasPage.on('request', (request) => aliasRequests.push(new URL(request.url()).pathname));
+  try {
+    await aliasPage.goto(`${baseUrl}/?demo=1`, { waitUntil: 'networkidle' });
+    await aliasPage.getByRole('heading', { name: /Draw Together/i }).waitFor();
+    assert.match(await aliasPage.locator('.demo-banner').textContent(), /nothing is saved to a real room/);
+    assert.match(await aliasPage.locator('.play-header .eyebrow').textContent(), /Round 3/);
+    await aliasPage.locator('#next-round').click();
+    assert.match(await aliasPage.locator('.play-header .eyebrow').textContent(), /Round 4/);
+    await aliasPage.locator('#reset-demo').click();
+    assert.match(await aliasPage.locator('.play-header .eyebrow').textContent(), /Round 3/);
+    assert.ok(!aliasRequests.some((path) => path.startsWith('/api/rooms')), `?demo=1 touched a real room route: ${aliasRequests.join(', ')}`);
+  } finally {
+    await aliasContext.close();
+  }
 }
 
 async function checkAccountFreeSample(browser) {

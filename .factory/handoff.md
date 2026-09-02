@@ -62,6 +62,7 @@ Cold public checks passed at
 - Arrow navigation plus Enter opens a game in a real room;
 - home and demo have zero Axe violations and no console/page errors;
 - demo traffic is same-origin, isolated, resettable, and reloads offline;
+- both `/demo` and `/?demo=1` open the isolated sample with banner and reset;
 - titles, canonicals, focus announcements, legal pages, styled 404, and every
   discovered link passed;
 - first-screen and prompt/rail geometry passed at 1366×768, 1440×900, and

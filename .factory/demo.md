@@ -1,6 +1,6 @@
 # Living Room Lobby demo
 
-Open `/demo` or choose **Try it with sample data** on the landing page.
+Open `/demo` or `/?demo=1`, or choose **Try it with sample data** on the landing page.
 
 The demo starts in a ready Draw Together round. Asha, Marcos, and Lee and Bo
 are already in the room, with a shared birthday-cake picture prompt and scores. On a

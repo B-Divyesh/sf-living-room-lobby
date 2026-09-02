@@ -32,7 +32,7 @@
     "claim": "Try it with sample data opens a ready Draw Together room in a separate 24-hour sample workspace.",
     "where": "landing first screen, demo banner, README",
     "test": "npm run test:browser -- --grep @claim:demo-sandbox",
-    "sandbox": "Fresh desktop browser context; click the landing action, assert the 24-hour seeded workspace and demo: storage namespace, reset it, then start for real and assert demo storage is discarded."
+    "sandbox": "Fresh desktop contexts cover the one-click /demo action and direct /?demo=1 alias; assert the banner, 24-hour workspace, separate demo: storage, reset, isolation, and Start for real cleanup."
   },
   {
     "id": "account-free-sample",

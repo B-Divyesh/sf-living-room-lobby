@@ -74,7 +74,8 @@ Deployed commit `98b506e1632464092cdc4e9add8c3b33265c1d53` at
 - A cold live browser found all three rewritten phrases, no console errors, no
   page errors, zero desktop/mobile Axe violations, and only the product origin.
 - The sample stayed available after a cold offline reload. Reset and the
-  separate `demo:` storage namespace remained intact.
+  separate `demo:` storage namespace remained intact. A fresh direct
+  `/?demo=1` context also proved its banner, seed, reset, and isolation.
 - Arrow keys moved focus and Enter opened Draw Together in a real three-player
   room. The phone completed the Pass & Guess handoff.
 - Every game’s minimum and maximum was exercised against the live room API.
