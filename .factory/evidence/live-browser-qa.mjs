@@ -50,7 +50,13 @@ try {
       h1: document.querySelectorAll('h1').length,
       imagesWithoutAlt: [...document.images].filter((image) => !image.hasAttribute('alt')).length,
     }));
+    const copy = {
+      join: await page.getByText('Use the TV room code to join.', { exact: true }).count(),
+      purchase: await page.getByText('Buying extra games is not available yet.', { exact: true }).count(),
+      license: await page.getByText('Verify a Family Pack license', { exact: true }).count(),
+    };
     const homeAxe = await axe(page);
+    await page.screenshot({ path: '.factory/evidence/polish-2-live-first-screen.png', fullPage: false });
     await page.getByRole('link', { name: /Try it with sample data/ }).click();
     await page.waitForLoadState('networkidle');
     await page.getByRole('heading', { name: /Draw together/i }).waitFor();
@@ -64,14 +70,30 @@ try {
       sessionKeys: Object.keys(sessionStorage),
     }));
     await page.screenshot({ path: '.factory/evidence/live-demo-desktop.png', fullPage: false });
+    await page.locator('#end-game').click();
+    await page.evaluate(() => {
+      const key = 'demo:living-room-lobby:room';
+      const room = JSON.parse(localStorage.getItem(key));
+      room.players = room.players.slice(0, 1);
+      room.stage = 'lobby';
+      room.game = null;
+      localStorage.setItem(key, JSON.stringify(room));
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.locator('[data-game="draw"]').click();
+    const capacityMessage = await page.locator('.toast.show').textContent();
+    assert.match(capacityMessage, /Draw Together needs 2–10 players\. Ask 1 more player to join\./);
+    await page.screenshot({ path: '.factory/evidence/polish-2-live-player-limit.png', fullPage: false });
     evidence.desktop = {
       semantics,
+      copy,
       focus,
       homeAxe,
       demoAxe,
       demo,
       origins: [...new Set(requests.map((request) => new URL(request.url).origin))],
       apiPaths: requests.filter((request) => new URL(request.url).pathname.startsWith('/api/')).map((request) => `${request.method} ${new URL(request.url).pathname}`),
+      capacityMessage,
       errors,
     };
     await context.close();
@@ -184,6 +206,7 @@ try {
     await host.keyboard.press('Enter');
     await host.locator('#tv-canvas').waitFor();
     const remoteChosen = await host.getByRole('heading', { name: /Draw Together/i }).isVisible();
+    await host.screenshot({ path: '.factory/evidence/polish-2-live-remote-enter.png', fullPage: false });
     await phone.locator('#draw-pad').waitFor();
     await host.locator('#end-game').click();
     await phone.locator('#leave-room').waitFor();
