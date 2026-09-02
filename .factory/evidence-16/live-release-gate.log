@@ -1,0 +1,5 @@
+
+> living-room-lobby@1.0.0 test:live
+> node scripts/release-gate.mjs d6d394c7a7e1b6a14bc3ab2e3e657ffa511b5187 https://living-room-lobby.sociobot.in
+
+{"gate":"passed","candidate":"d6d394c7a7e1b6a14bc3ab2e3e657ffa511b5187","build":"d6d394c7a7e1b6a14bc3ab2e3e657ffa511b5187","cache":"living-room-lobby-d6d394c7a7e1b6a14bc3ab2e3e657ffa511b5187","asset":"/assets/index-DXQ04g-D.js","footer":"Party games for one shared TV. Privacy · TermsOriginal AI-assisted artwork · Built by Param Factory · d6d394c7a7e1b6a14bc3ab2e3e657ffa511b5187","room":{"code":"4M45","playerId":"IdsPwSj2","viewport":"390x844","retainedAfterReload":true}}

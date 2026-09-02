@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audited 2026-09-02. This is the complete visitor-visible copy from the default
+Audited 2026-09-02, rechecked in polish round 3. This is the complete visitor-visible copy from the default
 landing route (`/`), including header, focused skip link, join panel, game
 cards, footer, and the default Family Pack disclosure. Counts treat numbers,
 emoji, and hyphenated terms as one word. No sentence exceeds 22 words or uses a
@@ -82,3 +82,12 @@ banned plain-words term.
 | Shipped isolated sample | demo |
 | No-word symbols | picture prompts |
 | Optional paid games | Family Pack |
+
+## Round 3 catalog and Privacy inventory
+
+`Play phone-optional family games on one shared TV.` is an 8-word, verb-first
+catalog description and stays below the 120-character limit.
+
+Round 3 added no landing copy. It registered the three existing Privacy-page
+assurances as `no-account-required`, `real-room-session-storage`, and
+`browser-storage-clear`; each has one observable browser test.

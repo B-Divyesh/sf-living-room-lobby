@@ -1,0 +1,79 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "axeViolations": 0,
+    "consoleErrors": [],
+    "title": "Living Room Lobby — party games for your TV",
+    "lang": "en",
+    "h1": 1,
+    "main": 1,
+    "header": 1,
+    "footer": 1,
+    "canonical": "https://living-room-lobby.sociobot.in/",
+    "description": "Phone-optional, language-light party games made for the living-room TV.",
+    "og": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+  },
+  {
+    "path": "/demo",
+    "status": 200,
+    "axeViolations": 0,
+    "consoleErrors": [],
+    "title": "Demo — Living Room Lobby",
+    "lang": "en",
+    "h1": 1,
+    "main": 1,
+    "header": 1,
+    "footer": 1,
+    "canonical": "https://living-room-lobby.sociobot.in/demo",
+    "description": "Try a ready Living Room Lobby sample game with no account.",
+    "og": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+  },
+  {
+    "path": "/privacy",
+    "status": 200,
+    "axeViolations": 0,
+    "consoleErrors": [],
+    "title": "Privacy — Living Room Lobby",
+    "lang": "en",
+    "h1": 1,
+    "main": 1,
+    "header": 1,
+    "footer": 1,
+    "canonical": "https://living-room-lobby.sociobot.in/privacy",
+    "description": "Read what Living Room Lobby stores and where it sends requests.",
+    "og": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+  },
+  {
+    "path": "/terms",
+    "status": 200,
+    "axeViolations": 0,
+    "consoleErrors": [],
+    "title": "Terms — Living Room Lobby",
+    "lang": "en",
+    "h1": 1,
+    "main": 1,
+    "header": 1,
+    "footer": 1,
+    "canonical": "https://living-room-lobby.sociobot.in/terms",
+    "description": "Read the Living Room Lobby terms for family party games.",
+    "og": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+  },
+  {
+    "path": "/live-round-3-missing",
+    "status": 404,
+    "axeViolations": 0,
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "title": "Page not found — Living Room Lobby",
+    "lang": "en",
+    "h1": 1,
+    "main": 1,
+    "header": 1,
+    "footer": 1,
+    "canonical": "https://living-room-lobby.sociobot.in/404",
+    "description": "Return to Living Room Lobby party games for one shared TV.",
+    "og": "https://living-room-lobby.sociobot.in/assets/lobby-social.webp"
+  }
+]

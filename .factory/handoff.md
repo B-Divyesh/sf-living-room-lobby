@@ -1,39 +1,50 @@
-# Living Room Lobby review 3 handoff
+# Living Room Lobby — polish round 3 handoff
 
 ## Status
 
-**FAIL — review only; no product code changed.**
+PASS. Product release `d6d394c7a7e1b6a14bc3ab2e3e657ffa511b5187` is live at
+`https://living-room-lobby.sociobot.in`.
 
-The live product passes the demo, listed claim, routing, accessibility, and
-earlier-finding checks. `.factory/review-3.md` records three blocking unlisted
-privacy assurances that need claim entries/tests or copy changes.
+## What changed
 
-## What was done
+- Added three Privacy claim entries and dedicated browser tests:
+  `no-account-required`, `real-room-session-storage`, and
+  `browser-storage-clear`.
+- The tests use fresh real host and 390 px phone contexts. They prove no
+  account UI/cookies/Authorization credential, session-only room state with
+  leave cleanup, and storage deletion of real-room and license fixtures.
+- Added a source contract so the three Privacy assurances cannot remain on the
+  page without their matching claim entry and tagged test.
+- Updated the catalog description to a short verb-first sentence.
 
-- Performed a fresh cold live review at 390×844 and 1440×900.
-- Exercised `/demo`, Reset demo, Start for real, request logging, storage
-  isolation, and cold offline reload.
-- Ran every one of the 20 exact `.factory/claims.json` commands from a fresh
-  `git clone` after `npm ci`; all passed.
-- Ran `npm test` and `npm run build`; both passed.
-- Checked all public routes, metadata, links, back/focus behavior, 404, and Axe
-  WCAG 2/2.1 A/AA on representative desktop/mobile routes.
-- Reconfirmed every finding from review 1 and review 2 against live behavior
-  and current source.
+## Verification
 
-## Remaining work
+- Clean clone: `npm ci`, then all 23 exact claim commands passed. Evidence:
+  `.factory/evidence-16/claims-clean-clone.log`.
+- Local: `npm test`, `npm run check`, Rust format, Clippy with warnings denied,
+  `npm run build`, `npm run test:browser`, and deployment validation passed.
+- Accessibility: local and live Axe reports have zero violations on home, demo,
+  Privacy, Terms, and 404. `verify-url.sh` found no live landing console errors.
+- Privacy/offline: demo requests were same-origin, direct `?demo=1` remained
+  isolated, Reset demo worked, and offline reload worked after first visit.
+- Deployment: the exact image passed health, JavaScript, worker-cache, footer,
+  `/data`, one-replica, durable-room, and desktop-host/390 px shared-phone
+  checks. See `.factory/evidence-16/live-release-gate.log`.
 
-Resolve `F-3-1` through `F-3-3` in `.factory/review-3.md`. They concern
-unlisted statements on `/privacy`; no behavior failed during this review.
-
-## How to verify
+## Run and verify
 
 ```sh
 npm ci
 npm test
+npm run check
+npm run test:browser
 npm run build
 ```
 
-Then run each command in `.factory/claims.json` from a clean checkout and
-review `https://living-room-lobby.sociobot.in` at `/`, `/demo`, `/privacy`, and
-`/terms`.
+Run every command in `.factory/claims.json`. Deploy a clean committed checkout
+with `./scripts/deploy-container.sh`.
+
+## Known gaps
+
+None. Family Pack checkout remains honestly unavailable by design, with a
+listed and tested unavailable state.

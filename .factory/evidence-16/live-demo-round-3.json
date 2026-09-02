@@ -1,0 +1,104 @@
+{
+  "firstScreen": [
+    {
+      "viewport": "1366x768",
+      "action": {
+        "x": 54.625,
+        "y": 659.125,
+        "width": 269.328125,
+        "height": 54
+      }
+    },
+    {
+      "viewport": "1440x900",
+      "action": {
+        "x": 57.59375,
+        "y": 734.25,
+        "width": 269.328125,
+        "height": 54
+      }
+    },
+    {
+      "viewport": "1920x1080",
+      "action": {
+        "x": 76.796875,
+        "y": 764.328125,
+        "width": 269.328125,
+        "height": 54
+      }
+    }
+  ],
+  "promptGeometry": [
+    {
+      "viewport": "1366x768",
+      "prompt": {
+        "x": 87.625,
+        "y": 487.28125,
+        "width": 210.609375,
+        "height": 59.0625
+      },
+      "rail": {
+        "x": 0,
+        "y": 652,
+        "width": 1366,
+        "height": 116
+      }
+    },
+    {
+      "viewport": "1440x900",
+      "prompt": {
+        "x": 90.59375,
+        "y": 554.578125,
+        "width": 225.59375,
+        "height": 62.25
+      },
+      "rail": {
+        "x": 0,
+        "y": 784,
+        "width": 1440,
+        "height": 116
+      }
+    },
+    {
+      "viewport": "1920x1080",
+      "prompt": {
+        "x": 109.796875,
+        "y": 644.390625,
+        "width": 322.796875,
+        "height": 83
+      },
+      "rail": {
+        "x": 0,
+        "y": 964,
+        "width": 1920,
+        "height": 116
+      }
+    }
+  ],
+  "desktopDemo": {
+    "banner": true,
+    "reset": true,
+    "sameOrigin": true,
+    "spanishRound": true,
+    "picturePrompt": "🐈",
+    "storage": {
+      "local": [
+        "demo:living-room-lobby:room"
+      ],
+      "session": [
+        "demo:living-room-lobby:workspace",
+        "demo:living-room-lobby:session"
+      ]
+    }
+  },
+  "mobileAction": {
+    "x": 16,
+    "y": 598.515625,
+    "width": 358,
+    "height": 54
+  },
+  "directDemo": {
+    "alias": true,
+    "offlineReload": true
+  }
+}
