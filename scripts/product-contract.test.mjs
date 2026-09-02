@@ -35,3 +35,22 @@ test('review 2 copy is plain, result-focused, and does not restore deployment pr
   assert.ok(catalog.trim().length <= 120, 'The catalog description exceeds 120 characters.');
   assert.match(catalog.trim(), /^Play\b/, 'The catalog description must begin with a verb.');
 });
+
+test('review 3 Privacy assurances each have a dedicated observable claim test', async () => {
+  const [page, claimsSource] = await Promise.all([
+    readFile(new URL('../frontend/src/main.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../.factory/claims.json', import.meta.url), 'utf8'),
+  ]);
+  const claims = JSON.parse(claimsSource);
+  const expected = [
+    ['no-account-required', 'Living Room Lobby works without accounts.'],
+    ['real-room-session-storage', 'A room session stays in session storage.'],
+    ['browser-storage-clear', 'You can clear either in browser settings.'],
+  ];
+  for (const [id, assurance] of expected) {
+    const claim = claims.find((entry) => entry.id === id);
+    assert.ok(claim, `Privacy assurance ${id} is missing from claims.json.`);
+    assert.match(claim.test, new RegExp(`@claim:${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    assert.match(page, new RegExp(assurance.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+});

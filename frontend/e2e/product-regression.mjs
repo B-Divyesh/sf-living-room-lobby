@@ -150,6 +150,141 @@ async function checkAccountFreeSample(browser) {
   }
 }
 
+async function checkNoAccountRequired(browser) {
+  // Privacy applies to a real host and a real joining phone, not only the
+  // sample. Keep these contexts independent so neither can lend credentials
+  // or session state to the other.
+  const hostContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const phoneContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const host = await hostContext.newPage();
+  const phone = await phoneContext.newPage();
+  const roomRequests = [];
+  const recordRoomRequest = (request) => {
+    const url = new URL(request.url());
+    if (url.origin === baseUrl && url.pathname.startsWith('/api/rooms')) {
+      roomRequests.push({ path: url.pathname, authorization: request.headers().authorization });
+    }
+  };
+  host.on('request', recordRoomRequest);
+  phone.on('request', recordRoomRequest);
+  const assertNoAccountBarrier = async (page, label) => {
+    assert.equal(await page.locator('input[type="password"], input[autocomplete="email"], input[name*="email" i], input[name*="account" i]').count(), 0,
+      `${label} showed an account credential field.`);
+    assert.equal(await page.getByRole('button', { name: /sign in|log in|create account/i }).count(), 0,
+      `${label} showed an account action.`);
+  };
+  try {
+    await host.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    await assertNoAccountBarrier(host, 'The real-room host');
+    await host.locator('#host-room').click();
+    await host.locator('.game-choices').waitFor();
+    const code = (await host.locator('.room-heading h1').textContent()).match(/[A-Z0-9]{4}/)?.[0];
+    assert.ok(code, 'The unauthenticated host did not receive a room code.');
+
+    await phone.goto(`${baseUrl}/?join=${code}`, { waitUntil: 'networkidle' });
+    await assertNoAccountBarrier(phone, 'The real-room join page');
+    await phone.locator('#player-name').fill('Marta');
+    await phone.locator('#join-form button[type="submit"]').click();
+    await phone.getByRole('heading', { name: 'Nice, Marta.' }).waitFor();
+    await host.getByText('Marta').waitFor();
+
+    assert.deepEqual(await hostContext.cookies(), [], 'Starting a real room must not create an account cookie.');
+    assert.deepEqual(await phoneContext.cookies(), [], 'Joining a real room must not create an account cookie.');
+    assert.ok(roomRequests.some((request) => request.path === '/api/rooms'), 'The host did not create a real room.');
+    assert.ok(roomRequests.some((request) => /\/api\/rooms\/[A-Z0-9]{4}\/join$/.test(request.path)), 'The phone did not join the real room.');
+    assert.ok(roomRequests.every((request) => request.authorization === undefined),
+      `A real-room request unexpectedly carried an Authorization credential: ${JSON.stringify(roomRequests)}`);
+  } finally {
+    await hostContext.close();
+    await phoneContext.close();
+  }
+}
+
+async function checkRealRoomSessionStorage(browser) {
+  const hostContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const phoneContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const host = await hostContext.newPage();
+  const phone = await phoneContext.newPage();
+  const readSession = (page) => page.evaluate(() => ({
+    session: sessionStorage.getItem('lrl_session'),
+    local: localStorage.getItem('lrl_session'),
+  }));
+  try {
+    await host.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    await host.locator('#host-room').click();
+    await host.locator('.game-choices').waitFor();
+    const code = (await host.locator('.room-heading h1').textContent()).match(/[A-Z0-9]{4}/)?.[0];
+    assert.ok(code, 'The host session did not receive a room code.');
+    const hostStorage = await readSession(host);
+    assert.equal(hostStorage.local, null, 'A host room session must not be placed in local storage.');
+    const hostSession = JSON.parse(hostStorage.session || '{}');
+    assert.deepEqual(Object.keys(hostSession).sort(), ['code', 'role', 'token']);
+    assert.equal(hostSession.role, 'host');
+    assert.equal(hostSession.code, code);
+    assert.match(hostSession.token || '', /^[A-Za-z0-9]+$/, 'The host session token was not retained in session storage.');
+
+    await phone.goto(`${baseUrl}/?join=${code}`, { waitUntil: 'networkidle' });
+    await phone.locator('#player-name').fill('Inez');
+    await phone.locator('#join-form button[type="submit"]').click();
+    await phone.getByRole('heading', { name: 'Nice, Inez.' }).waitFor();
+    const playerStorage = await readSession(phone);
+    assert.equal(playerStorage.local, null, 'A player room session must not be placed in local storage.');
+    const playerSession = JSON.parse(playerStorage.session || '{}');
+    assert.equal(playerSession.role, 'player');
+    assert.equal(playerSession.code, code);
+
+    await host.locator('#leave-room').click();
+    await host.locator('#host-room').waitFor();
+    assert.deepEqual(await readSession(host), { session: null, local: null }, 'Close room must clear the host session.');
+    await phone.locator('#leave-room').click();
+    await phone.locator('#host-room').waitFor();
+    assert.deepEqual(await readSession(phone), { session: null, local: null }, 'Leave room must clear the player session.');
+  } finally {
+    await hostContext.close();
+    await phoneContext.close();
+  }
+}
+
+async function checkBrowserStorageClear(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const token = 'privacy-clear-license';
+  await context.route(`https://api.sociobot.in/api/v1/products/living-room-lobby/verify?license=${token}`, (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ valid: false, reason: 'revoked' }),
+  }));
+  try {
+    await page.goto(`${baseUrl}/?license=${token}`, { waitUntil: 'networkidle' });
+    await page.locator('.license-status').waitFor();
+    await page.locator('#host-room').click();
+    await page.locator('.game-choices').waitFor();
+    const before = await page.evaluate(() => ({
+      room: sessionStorage.getItem('lrl_session'),
+      license: localStorage.getItem('sb_license:living-room-lobby'),
+      verdict: localStorage.getItem('sb_license:living-room-lobby:verdict'),
+    }));
+    assert.ok(before.room, 'The storage-clear fixture did not create a real-room session.');
+    assert.equal(before.license, token, 'The storage-clear fixture did not retain its license token.');
+    assert.ok(before.verdict, 'The storage-clear fixture did not retain its license verdict.');
+
+    // This is the same origin-scoped data deletion exposed by browser site-data
+    // settings. Reload in the same fresh context to prove the app has no hidden
+    // recovery path for either the real-room session or license fixture.
+    await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
+    await context.clearCookies();
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.locator('#host-room').waitFor();
+    assert.equal(await page.locator('.room-heading').count(), 0, 'A cleared browser must not restore the real room.');
+    const after = await page.evaluate(() => ({
+      room: sessionStorage.getItem('lrl_session'),
+      licenses: Object.keys(localStorage).filter((key) => key.startsWith('sb_license:living-room-lobby')),
+    }));
+    assert.equal(after.room, null, 'A cleared browser must not restore the room session.');
+    assert.deepEqual(after.licenses, [], 'A cleared browser must not restore the license fixture.');
+  } finally {
+    await context.close();
+  }
+}
+
 async function checkFreeGameAvailability(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
@@ -913,6 +1048,9 @@ try {
     if (included('@claim:same-origin-requests') || !grep) await checkDesktopAndPrivacy(browser);
     if (included('@claim:demo-sandbox') || !grep) await checkDemoSandbox(browser);
     if (included('@claim:account-free-sample') || !grep) await checkAccountFreeSample(browser);
+    if (included('@claim:no-account-required') || !grep) await checkNoAccountRequired(browser);
+    if (included('@claim:real-room-session-storage') || !grep) await checkRealRoomSessionStorage(browser);
+    if (included('@claim:browser-storage-clear') || !grep) await checkBrowserStorageClear(browser);
     if (included('@claim:demo-real-room-isolation') || !grep) await checkDemoRealRoomIsolation(browser);
     if (included('@regression:mobile-a11y') || !grep) await checkMobileCatalogueAndPointA11y(browser);
     if (included('@regression:mobile-first-viewport') || !grep) await checkMobileFirstViewport(browser);

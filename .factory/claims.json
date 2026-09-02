@@ -42,6 +42,27 @@
     "sandbox": "Fresh unauthenticated desktop browser context opens /demo directly, reaches the ready Draw Together room, and proves the sample request carries no Authorization credential or account step."
   },
   {
+    "id": "no-account-required",
+    "claim": "Starting or joining a real room does not require an account.",
+    "where": "Privacy page",
+    "test": "npm run test:browser -- --grep @claim:no-account-required",
+    "sandbox": "Fresh TV-sized host and 390 px phone contexts create and join a real room. The test proves there is no account form, account cookie, or Authorization credential on either room request."
+  },
+  {
+    "id": "real-room-session-storage",
+    "claim": "Real-room sessions stay in session storage and clear when a player leaves.",
+    "where": "Privacy page",
+    "test": "npm run test:browser -- --grep @claim:real-room-session-storage",
+    "sandbox": "Fresh TV-sized host and 390 px phone contexts create and join a real room, assert their sessions are in session storage rather than local storage, then close or leave and prove the sessions are gone."
+  },
+  {
+    "id": "browser-storage-clear",
+    "claim": "Clearing Living Room Lobby site storage removes a real-room session and Family Pack license data.",
+    "where": "Privacy page",
+    "test": "npm run test:browser -- --grep @claim:browser-storage-clear",
+    "sandbox": "Fresh desktop context seeds a real-room session and inactive license fixture, clears origin storage, reloads, and proves neither session nor license is restored."
+  },
+  {
     "id": "demo-real-room-isolation",
     "claim": "Sample play never changes a real room.",
     "where": "landing first-screen facts, demo documentation, README",
