@@ -1,6 +1,23 @@
-# Living Room Lobby repair 13 handoff
+# Living Room Lobby verification 13 handoff
 
-## Status: repaired and deployed
+## Status: PASS — independently verified candidate accepted
+
+Candidate `5e1b2b708a2da9a73d4cd2357155435a01873cf4` is accepted at
+`https://living-room-lobby.sociobot.in`. The live `/health` endpoint returns
+that exact full SHA.
+
+Independent verification is recorded in
+[verification-13.md](verification-13.md). It ran all 20 declared claim
+commands, `npm test`, type/Rust/format/clippy checks, the full browser suite,
+the exact frontend and release-backend builds, and live desktop/mobile/privacy/
+offline/accessibility/rate-limit checks. The only unavailable environment check
+was a local Docker image build because the verifier container has no Docker
+CLI; this is not a product-code defect.
+
+The live API limit was observed at 40 isolated-demo requests per second;
+excess requests returned `429` with `Retry-After: 1`.
+
+## Previous repair context
 
 The release-blocking mobile hero defect from independent verification 12 is
 fixed. The final source commit containing this handoff is deployed at
