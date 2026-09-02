@@ -5,7 +5,7 @@
 Tested candidate: `0a6407c8c8388b60ade18eab23f56b7c4e4d914a`  
 Tested public URL: `https://living-room-lobby.sociobot.in`  
 Work order: `living-room-lobby-verify-11`  
-Verification date: 2026-09-01 UTC
+Verification window: 2026-09-01–02 UTC
 
 ## Release decision
 

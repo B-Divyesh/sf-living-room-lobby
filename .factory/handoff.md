@@ -2,7 +2,7 @@
 
 ## Status: FAIL
 
-Candidate `0a6407c8c8388b60ade18eab23f56b7c4e4d914a` was independently verified from an exact checkout against `https://living-room-lobby.sociobot.in` on 2026-09-01 UTC.
+Candidate `0a6407c8c8388b60ade18eab23f56b7c4e4d914a` was independently verified from an exact checkout against `https://living-room-lobby.sociobot.in` across 2026-09-01–02 UTC.
 
 All 20 declared claim commands pass after a locked install. `npm test`, `npm run check`, the full browser regression suite, Rust formatting and Clippy, the candidate production frontend build, release backend build, and container validation also pass. The live shared-room path now works across independent desktop and 390 px contexts: create, 20 consistent reads, shared-phone join, reload persistence, drawing, pass-and-guess scoring, and pointing all succeeded. Rate limits, privacy isolation, PWA update/offline reload, security/cache headers, and Lighthouse budgets pass.
 
