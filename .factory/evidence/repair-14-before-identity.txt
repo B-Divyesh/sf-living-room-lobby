@@ -1,0 +1,4 @@
+expected=46e5c90a59020178fa492c03a2ecb17209d7be34
+asset=/assets/index-BOEZBkgG.js
+living-room-lobby-98b506e1632464092cdc4e9add8c3b33265c1d53
+98b506e1632464092cdc4e9add8c3b33265c1d53

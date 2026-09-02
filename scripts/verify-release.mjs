@@ -7,6 +7,13 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const CACHE_PATTERN = /const CACHE = 'living-room-lobby-([^']+)'/;
 const SCRIPT_PATTERN = /<script[^>]+src="([^"]*\/assets\/index-[^"]+\.js)"/;
 
+function uncachedFetch(url) {
+  // A release gate must fail rather than wait forever behind a stalled ingress
+  // connection. Each public surface gets its own abort signal so one stale or
+  // unhealthy endpoint cannot prevent the handoff from reaching a verdict.
+  return fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(20_000) });
+}
+
 export function assertExactRelease(expected, health, serviceWorker) {
   assert.match(expected, SHA_PATTERN, 'The expected release must be a full lowercase Git SHA.');
   assert.equal(
@@ -65,9 +72,9 @@ export function assertSharedPhoneRetained(code, join, hostRoom) {
 async function fetchRelease(baseUrl, expected, attempt) {
   const suffix = `release-check=${expected}-${attempt}`;
   const [healthResponse, workerResponse, shellResponse] = await Promise.all([
-    fetch(`${baseUrl}/health?${suffix}`, { cache: 'no-store' }),
-    fetch(`${baseUrl}/sw.js?${suffix}`, { cache: 'no-store' }),
-    fetch(`${baseUrl}/?${suffix}`, { cache: 'no-store' }),
+    uncachedFetch(`${baseUrl}/health?${suffix}`),
+    uncachedFetch(`${baseUrl}/sw.js?${suffix}`),
+    uncachedFetch(`${baseUrl}/?${suffix}`),
   ]);
   assert.equal(healthResponse.status, 200, `Health returned HTTP ${healthResponse.status}.`);
   assert.equal(workerResponse.status, 200, `Service worker returned HTTP ${workerResponse.status}.`);
@@ -78,7 +85,7 @@ async function fetchRelease(baseUrl, expected, attempt) {
   assertExactRelease(expected, health, serviceWorker);
   const assetPath = shell.match(SCRIPT_PATTERN)?.[1];
   assert.ok(assetPath, 'The live shell did not name its JavaScript asset.');
-  const javaScriptResponse = await fetch(new URL(assetPath, baseUrl), { cache: 'no-store' });
+  const javaScriptResponse = await uncachedFetch(new URL(assetPath, baseUrl));
   assert.equal(javaScriptResponse.status, 200, `JavaScript returned HTTP ${javaScriptResponse.status}.`);
   const javaScript = await javaScriptResponse.text();
   assertJavaScriptIdentity(expected, shell, javaScript);
@@ -203,6 +210,7 @@ async function assertLiveSharedPhoneFlow(baseUrl, expected) {
 }
 
 export async function verifyRelease(baseUrl, expected) {
+  assert.match(expected, SHA_PATTERN, 'The expected release must be a full lowercase Git SHA.');
   const normalizedBase = baseUrl.replace(/\/$/, '');
   const { health, assetPath } = await waitForExactHttpRelease(normalizedBase, expected);
   const { cache, footer } = await assertColdServiceWorkerCacheAndFooter(normalizedBase, expected);

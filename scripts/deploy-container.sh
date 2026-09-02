@@ -136,5 +136,9 @@ if [[ "$actual_mount" != "/data" || "$actual_storage" != "sf-living-room-lobby-d
   exit 1
 fi
 node "$repo_dir/scripts/durable-room-probe.mjs" verify "$durability_probe"
-node "$repo_dir/scripts/verify-release.mjs" "$source_sha"
+# This is intentionally the last release action. It reads the public health
+# endpoint, HTML shell + emitted JavaScript, worker source + cold worker cache,
+# and footer in fresh contexts.  Do not hand off merely because Azure reports a
+# ready revision: all public identity surfaces must name this exact candidate.
+node "$repo_dir/scripts/release-gate.mjs" "$source_sha"
 printf 'deployed and verified %s with data path %s and scale 1/1\n' "$image" "$data_dir"

@@ -8,29 +8,42 @@ import {
   assertJavaScriptIdentity,
   assertSharedPhoneRetained,
 } from './verify-release.mjs';
+import { runReleaseGate } from './release-gate.mjs';
 
-const candidate = 'f00f2259cdd871f0683cf9978f535a8339cc8094';
-const stale = '3cb790fb647e2b32b9b043c8266d50dd106e45d4';
+// These are the exact identities in independent verification 14. Keeping the
+// reported pair here means the deploy gate cannot quietly regress to accepting
+// the condition that blocked candidate 46e5c90 from release.
+const candidate = '46e5c90a59020178fa492c03a2ecb17209d7be34';
+const stale = '98b506e1632464092cdc4e9add8c3b33265c1d53';
 
-test('rejects the verifier-reproduced stale backend candidate', () => {
+test('reproduces verification 14 and rejects every stale public identity surface', () => {
   assert.throws(
     () => assertExactRelease(
       candidate,
       { build: stale, status: 'ok' },
       `const CACHE = 'living-room-lobby-${candidate}';`,
     ),
-    /Backend release mismatch.*f00f225.*3cb790f/,
+    /Backend release mismatch.*46e5c90.*98b506e/,
   );
-});
-
-test('rejects the verifier-reproduced stale service-worker cache', () => {
   assert.throws(
     () => assertExactRelease(
       candidate,
       { build: candidate, status: 'ok' },
       `const CACHE = 'living-room-lobby-${stale}';`,
     ),
-    /Service-worker release mismatch.*f00f225.*3cb790f/,
+    /Service-worker release mismatch.*46e5c90.*98b506e/,
+  );
+  assert.throws(
+    () => assertFooterIdentity(candidate, `Built by Param Factory · ${stale}`),
+    /Footer release mismatch.*46e5c90.*98b506e/,
+  );
+  assert.throws(
+    () => assertJavaScriptIdentity(
+      candidate,
+      '<script type="module" src="/assets/index-BOEZBkgG.js"></script>',
+      `const build="${stale}"`,
+    ),
+    /JavaScript release mismatch.*46e5c90/,
   );
 });
 
@@ -46,11 +59,18 @@ test('accepts only one exact full candidate identity', () => {
   );
 });
 
+test('release gate rejects an invalid candidate before it can wait on a live URL', async () => {
+  await assert.rejects(
+    () => runReleaseGate('not-a-sha', 'http://127.0.0.1:1'),
+    /full lowercase Git SHA/,
+  );
+});
+
 test('rejects a footer that does not identify the exact candidate', () => {
   assert.doesNotThrow(() => assertFooterIdentity(candidate, `Built by Param Factory · ${candidate}`));
   assert.throws(
     () => assertFooterIdentity(candidate, `Built by Param Factory · ${stale}`),
-    /Footer release mismatch.*f00f225.*3cb790f/,
+    /Footer release mismatch.*46e5c90.*98b506e/,
   );
 });
 
@@ -59,7 +79,7 @@ test('rejects JavaScript that does not identify the exact candidate', () => {
   assert.equal(assertJavaScriptIdentity(candidate, shell, `const build="${candidate}"`), '/assets/index-abcdefgh.js');
   assert.throws(
     () => assertJavaScriptIdentity(candidate, shell, `const build="${stale}"`),
-    /JavaScript release mismatch.*f00f225/,
+    /JavaScript release mismatch.*46e5c90/,
   );
 });
 
@@ -89,7 +109,7 @@ test('deployment cannot report success before exact live identity verification',
   const root = fileURLToPath(new URL('..', import.meta.url));
   const deployScript = await readFile(`${root}/scripts/deploy-container.sh`, 'utf8');
   const updatePosition = deployScript.indexOf('az containerapp update');
-  const verifyPosition = deployScript.indexOf('node "$repo_dir/scripts/verify-release.mjs" "$source_sha"');
+  const verifyPosition = deployScript.indexOf('node "$repo_dir/scripts/release-gate.mjs" "$source_sha"');
   const deactivatePosition = deployScript.indexOf('az containerapp revision deactivate');
   assert.match(deployScript, /source_sha=\$\(git -C "\$repo_dir" rev-parse HEAD\)/);
   assert.match(deployScript, /image_tag="\$app_name:\$source_sha"/);
@@ -117,8 +137,16 @@ test('deployment cannot report success before exact live identity verification',
       && deployScript.indexOf('durable-room-probe.mjs" verify') < verifyPosition,
     'Deployment must retain one real room across the revision handoff before checking the live flow.',
   );
+  const gateScript = await readFile(`${root}/scripts/release-gate.mjs`, 'utf8');
+  assert.match(gateScript, /import \{ verifyRelease \} from '.\/verify-release\.mjs';/);
+  assert.match(gateScript, /release gate failed:/);
+  assert.match(gateScript, /gate: 'passed'/);
+  assert.equal(typeof runReleaseGate, 'function');
   const verifierScript = await readFile(`${root}/scripts/verify-release.mjs`, 'utf8');
+  assert.match(verifierScript, /AbortSignal\.timeout\(20_000\)/);
   assert.match(verifierScript, /page\.locator\('footer'\)\.textContent\(\)/);
+  assert.match(verifierScript, /const cacheNames = await page\.evaluate\(\(\) => caches\.keys\(\)\)/);
+  assert.match(verifierScript, /\[`living-room-lobby-\$\{expected\}`\]/);
   assert.match(verifierScript, /assertFooterIdentity\(expected, footer\)/);
   assert.match(verifierScript, /assertJavaScriptIdentity\(expected, shell, javaScript\)/);
   assert.match(verifierScript, /viewport: \{ width: 390, height: 844 \}/);
