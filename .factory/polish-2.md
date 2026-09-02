@@ -66,4 +66,28 @@ The public release is `https://living-room-lobby.sociobot.in`.
 
 ## Live verification
 
-The final live release check and screenshots are recorded in the handoff after deployment.
+Deployed commit `98b506e1632464092cdc4e9add8c3b33265c1d53` at
+`https://living-room-lobby.sociobot.in`.
+
+- `/health`, the JavaScript asset, service-worker cache, and footer all identify
+  the exact deployed commit. The deployment retained its pre-rollout room.
+- A cold live browser found all three rewritten phrases, no console errors, no
+  page errors, zero desktop/mobile Axe violations, and only the product origin.
+- The sample stayed available after a cold offline reload. Reset and the
+  separate `demo:` storage namespace remained intact.
+- Arrow keys moved focus and Enter opened Draw Together in a real three-player
+  room. The phone completed the Pass & Guess handoff.
+- Every game’s minimum and maximum was exercised against the live room API.
+  Exact boundaries started; one below or above was rejected. A thirteenth room
+  player was also rejected.
+- The first action fit 1366×768, 1440×900, and 1920×1080. The longest sample
+  prompt stayed above the command rail at all three sizes.
+- `/`, `/demo`, `/privacy`, and `/terms` returned their route-specific titles,
+  one `h1`, one `main`, and canonical URL. The styled unknown route returned
+  HTTP 404 with the shared skeleton. Forward and Back navigation restored focus
+  and route announcements.
+- The live API allowed 40 same-client requests and returned one `429` with
+  `Retry-After: 1` for request 41.
+- Screenshots: `.factory/evidence/polish-2-live-first-screen.png`,
+  `.factory/evidence/polish-2-live-player-limit.png`, and
+  `.factory/evidence/polish-2-live-remote-enter.png`.

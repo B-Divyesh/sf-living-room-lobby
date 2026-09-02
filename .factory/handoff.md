@@ -48,5 +48,28 @@ the labelled tilt fallback, reduced motion, and offline use.
 
 ## Deployment
 
-The exact deployed commit and cold public checks are recorded here after the
-release command completes.
+Deployed commit: `98b506e1632464092cdc4e9add8c3b33265c1d53`.
+
+`./scripts/deploy-container.sh` built and published only
+`sf-living-room-lobby`, retained the pre-rollout room, and verified the exact
+backend, JavaScript, service-worker cache, footer, and 390 px shared-phone flow.
+
+Cold public checks passed at
+`https://living-room-lobby.sociobot.in`:
+
+- all three copy rewrites are present;
+- every advertised game boundary is enforced by the live API;
+- Arrow navigation plus Enter opens a game in a real room;
+- home and demo have zero Axe violations and no console/page errors;
+- demo traffic is same-origin, isolated, resettable, and reloads offline;
+- titles, canonicals, focus announcements, legal pages, styled 404, and every
+  discovered link passed;
+- first-screen and prompt/rail geometry passed at 1366×768, 1440×900, and
+  1920×1080;
+- request 41 returned `429` with `Retry-After: 1` after 40 allowed requests.
+
+Evidence screenshots are
+`.factory/evidence/polish-2-live-first-screen.png`,
+`.factory/evidence/polish-2-live-player-limit.png`, and
+`.factory/evidence/polish-2-live-remote-enter.png`. The URL verifier output is
+under `.factory/evidence/polish-2-live-verify/`.

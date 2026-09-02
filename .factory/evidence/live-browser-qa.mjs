@@ -50,11 +50,13 @@ try {
       h1: document.querySelectorAll('h1').length,
       imagesWithoutAlt: [...document.images].filter((image) => !image.hasAttribute('alt')).length,
     }));
+    const bodyText = await page.locator('body').innerText();
     const copy = {
-      join: await page.getByText('Use the TV room code to join.', { exact: true }).count(),
-      purchase: await page.getByText('Buying extra games is not available yet.', { exact: true }).count(),
-      license: await page.getByText('Verify a Family Pack license', { exact: true }).count(),
+      join: bodyText.includes('Use the TV room code to join.'),
+      purchase: bodyText.includes('Buying extra games is not available yet.'),
+      license: bodyText.includes('Verify a Family Pack license'),
     };
+    assert.deepEqual(copy, { join: true, purchase: true, license: true });
     const homeAxe = await axe(page);
     await page.screenshot({ path: '.factory/evidence/polish-2-live-first-screen.png', fullPage: false });
     await page.getByRole('link', { name: /Try it with sample data/ }).click();
