@@ -120,7 +120,7 @@ function renderHome(): void {
     <section class="hero">
       <div class="hero-copy">
         <p class="eyebrow">Party games for one shared TV</p>
-        <h1>Play together <br><em>on your TV.</em></h1>
+        <h1>Play to<wbr>ge<wbr>ther <br><em>on your TV.</em></h1>
         <p class="lede">For families sharing one TV, these games let kids and relatives play without everyone needing a phone.</p>
         <div class="hero-actions">
           <a class="button primary" href="${DEMO_PATH}" data-nav>Try it with sample data <span aria-hidden="true">→</span></a>
@@ -155,7 +155,7 @@ function renderHome(): void {
       <p id="game-strip-help" class="sr-only">Use the left and right arrow keys to browse all free games.</p>
       <div class="game-strip" tabindex="0" role="region" aria-label="Free games" aria-describedby="game-strip-help">${games.slice(0, 3).map(gameCard).join('')}</div>
     </section>
-    <section class="stored-info" aria-labelledby="stored-title"><p class="eyebrow">Privacy</p><h2 id="stored-title">What is stored</h2><ul><li>Real rooms keep names, scores, and game actions for up to six hours.</li><li>Sample data is isolated and expires after 24 hours.</li><li>A Family Pack license check stays in this browser.</li><li>The app does not load advertising or analytics scripts.</li></ul><a href="/privacy" data-nav>Read privacy details</a></section>
+    <section class="stored-info" aria-labelledby="stored-title"><p class="eyebrow">Privacy</p><h2 id="stored-title">What is stored</h2><ul><li>Real rooms keep names, scores, and game actions for up to six hours.</li><li>Sample data is isolated and expires after 24 hours.</li><li>A Family Pack license check stays in this browser.</li><li>The app does not load advertising or analytics scripts.</li></ul><a class="privacy-details-link" href="/privacy" data-nav>Read privacy details</a></section>
     <section class="family-pack" aria-labelledby="pack-title"><div><p class="eyebrow">Family Pack</p><h2 id="pack-title">Extra games are not available yet</h2><p>Hosted checkout is being set up. Statue Switch and Colour Chorus stay locked. Free games stay free.</p></div>
       <div class="pack-actions">${unlocked ? '<p class="unlocked">✓ Family Pack unlocked on this device</p>' : `${licenseStatus === 'inactive' ? '<p class="license-status" role="status">This license is no longer active. Extra games remain locked.</p>' : ''}<details class="restore"><summary>Have a Family Pack license from an earlier purchase? Check it</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" required><button class="button secondary" type="submit" aria-label="Verify Family Pack license">Verify license</button></form></details>`}</div>
     </section>`, 'home');

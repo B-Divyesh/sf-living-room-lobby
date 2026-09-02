@@ -296,6 +296,57 @@ async function checkMobileFirstViewport(browser) {
   }
 }
 
+async function checkMobileTextResizeReflow(browser) {
+  // Regression for verification 11: at 390 px / 200% text, the hero's fixed
+  // grid minimum and unbreakable display word expanded the document to 555 px
+  // and the overflow-hidden hero cut off the headline. Exercise both entry
+  // points because the demo banner changes the available vertical layout.
+  for (const path of ['/', '/demo']) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    try {
+      await page.goto(`${baseUrl}${path}`, { waitUntil: 'networkidle' });
+      await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+      await page.waitForTimeout(50);
+      const layout = await page.evaluate(() => {
+        const box = (element) => {
+          const rect = element?.getBoundingClientRect();
+          return rect && { width: rect.width, right: rect.right, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth };
+        };
+        const h1 = document.querySelector('main h1');
+        const hero = document.querySelector('.hero');
+        const privacy = [...document.querySelectorAll('a')].find((link) => link.textContent?.includes('Read privacy details'));
+        const privacyBox = privacy?.getBoundingClientRect();
+        const targets = [...document.querySelectorAll('a[href], button, input, select, summary, [tabindex]:not([tabindex="-1"])')]
+          .filter((element) => element.getClientRects().length > 0)
+          .map((element) => {
+            const rect = element.getBoundingClientRect();
+            return { label: (element.getAttribute('aria-label') || element.textContent || element.tagName).trim().replace(/\s+/g, ' ').slice(0, 60), width: rect.width, height: rect.height };
+          });
+        return {
+          clientWidth: document.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+          h1: box(h1),
+          heroOverflow: hero && getComputedStyle(hero).overflow,
+          privacy: privacyBox && { width: privacyBox.width, height: privacyBox.height },
+          targets,
+        };
+      });
+      assert.equal(layout.scrollWidth, layout.clientWidth, `${path} overflowed at 390 px with 200% text: ${layout.scrollWidth}px / ${layout.clientWidth}px.`);
+      assert.ok(layout.h1 && layout.h1.scrollWidth <= layout.h1.clientWidth, `${path} headline was clipped at 200% text.`);
+      assert.ok(layout.h1 && layout.h1.right <= layout.clientWidth, `${path} headline extended beyond the viewport at 200% text.`);
+      assert.notEqual(layout.heroOverflow, 'hidden', `${path} hero may not hide enlarged content.`);
+      const undersized = layout.targets.filter((target) => target.width < 44 || target.height < 44);
+      assert.deepEqual(undersized, [], `${path} had undersized interactive targets at 200% text: ${JSON.stringify(undersized)}.`);
+      if (path === '/') {
+        assert.ok(layout.privacy && layout.privacy.width >= 44 && layout.privacy.height >= 44, `Privacy target was ${layout.privacy?.width}×${layout.privacy?.height}px.`);
+      }
+    } finally {
+      await context.close();
+    }
+  }
+}
+
 async function checkDesktopFirstViewport(browser) {
   for (const viewport of [{ width: 1366, height: 768 }, { width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
     const context = await browser.newContext({ viewport });
@@ -391,9 +442,11 @@ async function checkRouteAnnouncement(browser) {
     await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
     await page.getByLabel('Primary').getByRole('link', { name: 'Privacy' }).click();
     await page.getByRole('heading', { name: 'Privacy' }).waitFor();
+    await page.waitForFunction(() => document.querySelector('#route-status')?.textContent === 'Privacy page');
     assert.equal(await page.locator('#route-status').textContent(), 'Privacy page');
     await page.goBack();
     await page.getByRole('heading', { name: /Play together/i }).waitFor();
+    await page.waitForFunction(() => document.querySelector('#route-status')?.textContent?.includes('Play together on your TV. page'));
     assert.match(await page.locator('#route-status').textContent() || '', /Play together on your TV\. page/);
   } finally {
     await context.close();
@@ -757,6 +810,7 @@ try {
     if (included('@claim:demo-real-room-isolation') || !grep) await checkDemoRealRoomIsolation(browser);
     if (included('@regression:mobile-a11y') || !grep) await checkMobileCatalogueAndPointA11y(browser);
     if (included('@regression:mobile-first-viewport') || !grep) await checkMobileFirstViewport(browser);
+    if (included('@regression:mobile-text-resize-reflow') || !grep) await checkMobileTextResizeReflow(browser);
     if (included('@regression:desktop-first-viewport') || !grep) await checkDesktopFirstViewport(browser);
     if (included('@regression:prompt-rail-geometry') || !grep) await checkPromptRailGeometry(browser);
     if (included('@claim:language-light-round') || !grep) await checkSpanishPictureRound(browser);

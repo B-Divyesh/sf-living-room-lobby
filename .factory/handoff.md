@@ -1,11 +1,75 @@
-# Living Room Lobby verification handoff
+# Living Room Lobby repair handoff
 
-## Status: FAIL
+## Status: ready for the checked-in container deployment
 
-Candidate `0a6407c8c8388b60ade18eab23f56b7c4e4d914a` was independently verified from an exact checkout against `https://living-room-lobby.sociobot.in` across 2026-09-01–02 UTC.
+This repair addresses every release blocker in independent verification 11 and
+the controller's follow-up review without changing the researched product
+scope: a shared-TV, phone-optional family game room still works with its real
+SQLite backend, sample workspace, and free games.
 
-All 20 declared claim commands pass after a locked install. `npm test`, `npm run check`, the full browser regression suite, Rust formatting and Clippy, the candidate production frontend build, release backend build, and container validation also pass. The live shared-room path now works across independent desktop and 390 px contexts: create, 20 consistent reads, shared-phone join, reload persistence, drawing, pass-and-guess scoring, and pointing all succeeded. Rate limits, privacy isolation, PWA update/offline reload, security/cache headers, and Lighthouse budgets pass.
+## Repairs
 
-The release remains a **FAIL** for two blockers. The public deployment reports commit `e6281676a59975fdc5448f549fc98cc8e461cdec` in `/health`, footer, service worker, and JavaScript instead of candidate `0a6407c…`. Also, 200% text size at 390 px produces a 555 px document and visibly clips the 588.9 px hero heading. A visible privacy-details link is only 17–19 px high, below the 44 px target requirement.
+- Reproduced the verifier's 390×844 / 200% text failure before editing. The
+  home document was **583 px** wide for a 390 px viewport; its hero heading was
+  **588.86 px** wide and was cut by the hero's `overflow: hidden`.
+- Removed fixed grid minimums, allowed the hero grid children to shrink, added
+  safe word-break opportunities in the display heading, and removed the
+  clipping hero overflow. The mobile header, fixed command rail, play header,
+  hero image edge, and toast now wrap or constrain themselves at enlarged text
+  instead of expanding the document.
+- The repaired Home and Demo at 390×844 / 200% text both measure exactly
+  **390 px document width**. Home's heading is 358 px wide with equal client
+  and scroll widths; its visible privacy-details control measures
+  **304.14×53 px**. Evidence: `repair-12-before-390-200.png`,
+  `repair-12-home-390-200.png`, and `repair-12-demo-390-200.png` in
+  `.factory/evidence/`.
+- Added `@regression:mobile-text-resize-reflow`. It opens both Home and Demo
+  in fresh touch-enabled 390×844 contexts, forces 200% root text, asserts no
+  document overflow or clipped heading, verifies the hero does not hide
+  enlarged content, and checks every visible link/button/input/select/summary
+  target is at least 44×44 px. The privacy-details link has its own explicit
+  44 px minimum target.
+- Completed `.factory/copy-audit.md` with all default landing-page copy,
+  including the three play modes, all game-card text, restore controls, and
+  footer text. Claim mappings remain explicit.
+- Kept the dynamic image build identity contract intact. The deployment script
+  injects the committed SHA into both frontend and backend and refuses success
+  unless `/health`, service-worker cache, footer, JavaScript bundle, and a real
+  shared-phone room flow agree on that exact identity.
 
-See `.factory/verification-11.md` for exact commands, measurements, allowances, and defects. No product code or infrastructure was changed.
+## Verification
+
+Performed from a clean `npm ci` install:
+
+- `npm test` — passed: 5 Vitest, 9 Node contract, and 19 Rust tests.
+- `npm run check`, `cargo fmt --all -- --check`, and
+  `cargo clippy --all-targets --locked -- -D warnings` — passed.
+- `npm run test:browser` — passed all browser/claim/regression checks,
+  including offline reload, request privacy, keyboard remote controls, desktop
+  host plus 390 px shared-phone flow, limits, and the new text-resize test.
+- `npm run build` — passed. Production assets: 57.63 KB JavaScript
+  (21.11 KB gzip), 19.01 KB CSS (5.24 KB gzip), 108,076 B hero WebP.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:18080/` — passed: HTTP 200,
+  route title, `lang=en`, one h1, main landmark, image alt, no unlabeled
+  buttons, and no console errors.
+- Playwright Axe WCAG 2 A/AA smoke checks returned zero violations for desktop
+  Home and 390 px Home, Demo, and Privacy. The browser suite uses the same Axe
+  integration on its critical host/player screens.
+- `./scripts/deploy-container.sh --validate-only` remains the checked-in
+  one-replica `/data` container contract. The release deployment runs that
+  configuration and the release verifier as its final gate.
+
+## Deployment and live proof
+
+Run `./scripts/deploy-container.sh` from this clean committed checkout. It
+builds `sociobotregistry.azurecr.io/sf-living-room-lobby:<commit>`, preserves a
+room through the one-replica `/data` handover, waits for the exact ready
+revision, and then runs `scripts/verify-release.mjs`. That verifier rejects a
+stale backend, service worker, footer, or JavaScript asset and exercises an
+independent desktop-host/390 px shared-phone join after deployment.
+
+## Known gaps
+
+No product defect is known from this repair. Physical Samsung Tizen, LG webOS,
+Fire TV Silk, and real orientation hardware are not available in the worker;
+the browser suite exercises the documented D-pad and labeled phone fallback.
