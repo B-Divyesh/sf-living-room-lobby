@@ -763,6 +763,19 @@ mod tests {
         let joined: Value =
             serde_json::from_slice(&join.into_body().collect().await.unwrap().to_bytes()).unwrap();
         let player = joined["token"].as_str().unwrap();
+        let second_join = service
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/rooms/{code}/join"))
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"name":"Second player","mode":"solo"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second_join.status(), StatusCode::OK);
         let host_body = json!({"token":host,"stage":"playing","game":"point","prompt":"READY","resetRound":true}).to_string();
         let started = service
             .clone()

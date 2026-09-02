@@ -40,7 +40,7 @@ banned plain-words term.
 | Shared phone | 2 | pass |
 | Pass it after each turn. | 5 | claim: shared-phone |
 | Personal phone | 2 | pass |
-| Scan once. | 2 | pass |
+| Use the TV room code to join. | 7 | claim: join-code-path |
 | Games | 1 | pass |
 | Choose a game | 3 | pass |
 | Use the left and right arrow keys to browse all free games. | 12 | claim: remote-controls |
@@ -61,10 +61,10 @@ banned plain-words term.
 | The app does not load advertising or analytics scripts. | 9 | claim: no-advertising-or-analytics |
 | Read privacy details | 3 | pass |
 | Family Pack | 2 | pass |
-| Hosted checkout is being set up. | 6 | claim: family-pack-unavailable |
+| Buying extra games is not available yet. | 7 | claim: family-pack-unavailable |
 | Statue Switch and Colour Chorus stay locked. | 6 | claim: family-pack-unavailable |
 | Free games stay free. | 4 | claim: free-game-availability |
-| Have a Family Pack license from an earlier purchase? Check it | 11 | pass |
+| Verify a Family Pack license | 5 | result-naming control |
 | License token | 2 | pass |
 | Verify license | 2 | pass |
 | Terms | 1 | pass |

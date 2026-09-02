@@ -65,9 +65,9 @@
   {
     "id": "remote-controls",
     "claim": "Use a TV remote to move and choose.",
-    "where": "landing remote hint and README",
+    "where": "landing remote hint and game command rail",
     "test": "npm run test:browser -- --grep @claim:remote-controls",
-    "sandbox": "Fresh desktop browser context at /demo; use ArrowRight to move focus in the command rail and game picker."
+    "sandbox": "Fresh desktop browser context at /demo; use ArrowRight to move focus in the command rail and game picker, press Enter on Point Panic, and assert its playable screen opens."
   },
   {
     "id": "shared-phone",
@@ -94,8 +94,8 @@
     "id": "player-count-limits",
     "claim": "Draw Together, Point Panic, and Colour Chorus support 2–10 players; Pass & Guess and Statue Switch support 3–12 players.",
     "where": "game cards and demo room game chooser",
-    "test": "npm run test:browser -- --grep @claim:player-count-limits",
-    "sandbox": "Fresh desktop browser context at /demo; open the ready sample lobby and assert every selectable game visibly shows its exact minimum–maximum player range, then open each free game from the three-player sample."
+    "test": "npm run test:browser -- --grep @claim:player-count-limits && cargo test --locked claim_player_count_limits_are_enforced_at_every_boundary",
+    "sandbox": "Fresh demo context checks all displayed ranges and tests both accepted boundaries plus both rejected sides for every free game. The Rust boundary test repeats all five rules used by the real-room API."
   },
   {
     "id": "shared-tv-canvas",

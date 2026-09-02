@@ -40,6 +40,18 @@ export const games: GameInfo[] = [
   game('chorus', '≋', 'Colour Chorus', 'Match the rhythm together.', 2, 10, true),
 ];
 
+export function playerCountError(game: GameInfo, count: number): string {
+  if (count < game.minPlayers) {
+    const missing = game.minPlayers - count;
+    return `${game.name} needs ${game.players}. Ask ${missing} more ${missing === 1 ? 'player' : 'players'} to join.`;
+  }
+  if (count > game.maxPlayers) {
+    const extra = count - game.maxPlayers;
+    return `${game.name} needs ${game.players}. Ask ${extra} ${extra === 1 ? 'player' : 'players'} to sit out this round.`;
+  }
+  return '';
+}
+
 export const drawPrompts = ['🐈 CAT', '🌳 TREE', '⛵ BOAT', '☀️ SUN', '🐟 FISH', '🏠 HOUSE', '🐦 BIRD', '🎂 BIRTHDAY CAKE'];
 export const passPrompts = ['🐘 ELEPHANT', '🚲 BICYCLE', '🌧️ RAIN', '🍌 BANANA', '✈️ AIRPLANE', '🐙 OCTOPUS', '🎂 BIRTHDAY', '🌋 VOLCANO'];
 export const statuePrompts = ['TALL TRIANGLE △', 'TINY BALL ●', 'WIDE STAR ★', 'WAVY LINE ∿'];

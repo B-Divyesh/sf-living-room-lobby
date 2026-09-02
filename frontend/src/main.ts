@@ -2,7 +2,7 @@ import QRCode from 'qrcode';
 import './style.css';
 import { createRoom, getRoom, hostUpdate, joinRoom, playerAction } from './api';
 import { DEMO_PATH, demoMode, discardDemo, loadDemoRoom, loadDemoSession, provisionDemoWorkspace, resetDemo, saveDemoSession } from './demo';
-import { games, localizedPrompt, nextPrompt, passPrompts } from './game-data';
+import { games, localizedPrompt, nextPrompt, passPrompts, playerCountError } from './game-data';
 import { cachedLicenseStatus, captureLicense, restoreLicense, verifyLicense } from './license';
 import type { LicenseStatus } from './license';
 import { releaseId } from './release';
@@ -149,15 +149,15 @@ function renderHome(): void {
       </form>
     </section>
     <section class="how" aria-labelledby="how-title"><p class="eyebrow">Choose how to play</p><h2 id="how-title">Three ways to play</h2>
-      <ol><li><b>TV remote</b><span>Host with arrows and OK.</span></li><li><b>Shared phone</b><span>Pass it after each turn.</span></li><li><b>Personal phone</b><span>Scan once.</span></li></ol>
+      <ol><li><b>TV remote</b><span>Host with arrows and OK.</span></li><li><b>Shared phone</b><span>Pass it after each turn.</span></li><li><b>Personal phone</b><span>Use the TV room code to join.</span></li></ol>
     </section>
     <section class="catalogue" aria-labelledby="games-title"><div><p class="eyebrow">Games</p><h2 id="games-title">Choose a game</h2></div>
       <p id="game-strip-help" class="sr-only">Use the left and right arrow keys to browse all free games.</p>
       <div class="game-strip" tabindex="0" role="region" aria-label="Free games" aria-describedby="game-strip-help">${games.slice(0, 3).map(gameCard).join('')}</div>
     </section>
     <section class="stored-info" aria-labelledby="stored-title"><p class="eyebrow">Privacy</p><h2 id="stored-title">What is stored</h2><ul><li>Real rooms keep names, scores, and game actions for up to six hours.</li><li>Sample data is isolated and expires after 24 hours.</li><li>A Family Pack license check stays in this browser.</li><li>The app does not load advertising or analytics scripts.</li></ul><a class="privacy-details-link" href="/privacy" data-nav>Read privacy details</a></section>
-    <section class="family-pack" aria-labelledby="pack-title"><div><p class="eyebrow">Family Pack</p><h2 id="pack-title">Extra games are not available yet</h2><p>Hosted checkout is being set up. Statue Switch and Colour Chorus stay locked. Free games stay free.</p></div>
-      <div class="pack-actions">${unlocked ? '<p class="unlocked">✓ Family Pack unlocked on this device</p>' : `${licenseStatus === 'inactive' ? '<p class="license-status" role="status">This license is no longer active. Extra games remain locked.</p>' : ''}<details class="restore"><summary>Have a Family Pack license from an earlier purchase? Check it</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" required><button class="button secondary" type="submit" aria-label="Verify Family Pack license">Verify license</button></form></details>`}</div>
+    <section class="family-pack" aria-labelledby="pack-title"><div><p class="eyebrow">Family Pack</p><h2 id="pack-title">Extra games are not available yet</h2><p>Buying extra games is not available yet. Statue Switch and Colour Chorus stay locked. Free games stay free.</p></div>
+      <div class="pack-actions">${unlocked ? '<p class="unlocked">✓ Family Pack unlocked on this device</p>' : `${licenseStatus === 'inactive' ? '<p class="license-status" role="status">This license is no longer active. Extra games remain locked.</p>' : ''}<details class="restore"><summary>Verify a Family Pack license</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" name="license" autocomplete="off" required><button class="button secondary" type="submit" aria-label="Verify Family Pack license">Verify license</button></form></details>`}</div>
     </section>`, 'home');
   bindHome();
 }
@@ -236,7 +236,9 @@ function playerPebble(player: Room['players'][number]): string {
 async function startGame(game: GameId): Promise<void> {
   const info = games.find((item) => item.id === game)!;
   if (info.paid && !unlocked) { errorMessage = 'That extra game is not available yet.'; render(); return; }
-  try { room = await hostUpdate(session!, { stage: 'playing', game, prompt: nextPrompt(game, 0), round: 0, resetRound: true, message: 'Round started' }); render(); }
+  const countError = playerCountError(info, room!.players.length);
+  if (countError) { errorMessage = countError; render(); return; }
+  try { room = await hostUpdate(session!, { stage: 'playing', game, prompt: nextPrompt(game, 0), round: 0, resetRound: true, message: 'Round started' }); errorMessage = ''; render(); }
   catch (error) { errorMessage = message(error); render(); }
 }
 

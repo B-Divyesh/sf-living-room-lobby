@@ -167,6 +167,25 @@ async function checkPlayerCountLimits(browser) {
     ['statue', 'Statue switch', '3–12 players'],
     ['chorus', 'Colour chorus', '2–10 players'],
   ];
+  const setPlayerCount = async (count) => {
+    await page.evaluate((playerCount) => {
+      const key = 'demo:living-room-lobby:room';
+      const saved = localStorage.getItem(key);
+      if (!saved) throw new Error('The demo room is missing.');
+      const room = JSON.parse(saved);
+      const sample = room.players.length ? room.players : [{ id: 'sample', name: 'Player', mode: 'solo', color: '#b7d43d', score: 0, x: 50, y: 50 }];
+      room.stage = 'lobby';
+      room.game = null;
+      room.players = Array.from({ length: playerCount }, (_, index) => ({
+        ...sample[index % sample.length],
+        id: `boundary-${index}`,
+        name: `Player ${index + 1}`,
+      }));
+      localStorage.setItem(key, JSON.stringify(room));
+    }, count);
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.locator('.game-choices').waitFor();
+  };
   try {
     await page.goto(`${baseUrl}/demo`, { waitUntil: 'networkidle' });
     await page.locator('#end-game').click();
@@ -175,10 +194,28 @@ async function checkPlayerCountLimits(browser) {
       const choice = page.locator(`[data-game="${id}"]`);
       assert.match(await choice.textContent(), new RegExp(`${name}.*${range}`, 'i'), `${name} did not show ${range}.`);
     }
-    for (const [id, name] of expectedRanges.slice(0, 3)) {
+    for (const [id, name, range] of expectedRanges.slice(0, 3)) {
+      const [minimum, maximum] = range.match(/\d+/g).map(Number);
+
+      await setPlayerCount(minimum - 1);
+      await page.locator(`[data-game="${id}"]`).click();
+      await page.locator('.toast.show').waitFor();
+      assert.match(await page.locator('.toast.show').textContent(), new RegExp(`${name} needs ${range}.*Ask 1 more player to join`, 'i'));
+      assert.equal(await page.locator('#end-game').count(), 0, `${name} started below its minimum.`);
+
+      await setPlayerCount(minimum);
       await page.locator(`[data-game="${id}"]`).click();
       await page.getByRole('heading', { name: new RegExp(name, 'i') }).waitFor();
-      await page.locator('#end-game').click();
+
+      await setPlayerCount(maximum);
+      await page.locator(`[data-game="${id}"]`).click();
+      await page.getByRole('heading', { name: new RegExp(name, 'i') }).waitFor();
+
+      await setPlayerCount(maximum + 1);
+      await page.locator(`[data-game="${id}"]`).click();
+      await page.locator('.toast.show').waitFor();
+      assert.match(await page.locator('.toast.show').textContent(), new RegExp(`${name} needs ${range}.*Ask 1 player to sit out this round`, 'i'));
+      assert.equal(await page.locator('#end-game').count(), 0, `${name} started above its maximum.`);
     }
   } finally {
     await context.close();
@@ -270,6 +307,9 @@ async function checkMobileCatalogueAndPointA11y(browser) {
     }
 
     await page.locator('#host-room').click();
+    const code = (await page.locator('.room-heading h1').textContent()).match(/[A-Z0-9]{4}/)?.[0];
+    assert.ok(code, 'The mobile accessibility room did not show a code.');
+    await joinPlayersViaApi(page, code, ['Asha', 'Bo']);
     await page.locator('[data-game="point"]').click();
     await page.locator('.point-arena').waitFor();
     assert.equal(await page.locator('.target').getAttribute('role'), 'img');
@@ -551,6 +591,21 @@ async function assertDurableRoomReads(host, phone, code) {
   assert.ok(reads.every((read) => read.code === code), 'A durable room read did not return the host room.');
 }
 
+async function joinPlayersViaApi(page, code, names) {
+  for (const name of names) {
+    const joined = await page.evaluate(async ({ roomCode, playerName }) => {
+      const response = await fetch(`/api/rooms/${roomCode}/join`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: playerName, mode: 'solo' }),
+      });
+      return { status: response.status, body: await response.json() };
+    }, { roomCode: code, playerName: name });
+    assert.equal(joined.status, 200, `${name} could not join room ${code}: ${JSON.stringify(joined.body)}`);
+  }
+  await page.waitForFunction((minimum) => document.querySelectorAll('.player').length >= minimum, names.length);
+}
+
 async function checkCoreRoomFlow(browser) {
   const hostContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const phoneContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -575,6 +630,7 @@ async function checkCoreRoomFlow(browser) {
     await phone.locator('#join-form button[type="submit"]').click();
     await phone.getByRole('heading', { name: 'Nice, QA Family.' }).waitFor();
     await host.waitForFunction(() => document.body.textContent?.includes('QA Family'));
+    await joinPlayersViaApi(host, code, ['Kai', 'Mina']);
 
     await host.locator('[data-game="draw"]').focus();
     await host.keyboard.press('ArrowRight');
@@ -672,6 +728,9 @@ async function checkRemoteControls(browser) {
     await page.locator('[data-game="draw"]').focus();
     await page.keyboard.press('ArrowRight');
     assert.equal(await page.locator('[data-game="point"]').evaluate((element) => document.activeElement === element), true);
+    await page.keyboard.press('Enter');
+    await page.getByRole('heading', { name: /Point Panic/i }).waitFor();
+    assert.equal(await page.locator('.point-arena').count(), 1, 'Enter/OK did not choose the focused game.');
   } finally {
     await context.close();
   }
@@ -704,11 +763,14 @@ async function checkFamilyPackUnavailable(browser) {
     await page.locator('#start-real').click();
     await page.getByRole('heading', { name: /Extra games are not available yet/ }).waitFor();
     assert.equal(await page.getByRole('link', { name: /Buy the Family Pack/i }).count(), 0, 'An unavailable checkout must not be advertised as a purchase action.');
-    assert.match(await page.locator('.family-pack').textContent(), /Hosted checkout is being set up/);
+    assert.match(await page.locator('.family-pack').textContent(), /Buying extra games is not available yet/);
     await page.locator('#host-room').click();
     await page.locator('[data-game="statue"]').click();
     await page.locator('.toast.show').waitFor();
     assert.match(await page.locator('.toast.show').textContent(), /extra game is not available yet/i);
+    const code = (await page.locator('.room-heading h1').textContent()).match(/[A-Z0-9]{4}/)?.[0];
+    assert.ok(code, 'The Family Pack check room did not show a code.');
+    await joinPlayersViaApi(page, code, ['Asha', 'Bo']);
     await page.locator('[data-game="draw"]').click();
     await page.locator('#tv-canvas').waitFor();
   } finally {

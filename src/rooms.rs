@@ -29,6 +29,36 @@ const API_REQUEST_LIMIT: u32 = 40;
 const API_REQUEST_WINDOW_MILLISECONDS: i64 = 1_000;
 const DEMO_WORKSPACE_TTL_SECONDS: i64 = 86_400;
 
+fn game_player_limits(game: &str) -> Option<(&'static str, usize, usize)> {
+    match game {
+        "draw" => Some(("Draw Together", 2, 10)),
+        "point" => Some(("Point Panic", 2, 10)),
+        "pass" => Some(("Pass & Guess", 3, 12)),
+        "statue" => Some(("Statue Switch", 3, 12)),
+        "chorus" => Some(("Colour Chorus", 2, 10)),
+        _ => None,
+    }
+}
+
+fn player_count_error(game: &str, count: usize) -> Option<String> {
+    let (name, minimum, maximum) = game_player_limits(game)?;
+    if count < minimum {
+        let missing = minimum - count;
+        return Some(format!(
+            "{name} needs {minimum}–{maximum} players. Ask {missing} more {} to join.",
+            if missing == 1 { "player" } else { "players" }
+        ));
+    }
+    if count > maximum {
+        let extra = count - maximum;
+        return Some(format!(
+            "{name} needs {minimum}–{maximum} players. Ask {extra} {} to sit out this round.",
+            if extra == 1 { "player" } else { "players" }
+        ));
+    }
+    None
+}
+
 impl AppState {
     pub fn new(pool: SqlitePool) -> Self {
         Self {
@@ -581,16 +611,28 @@ async fn host_update(
     if input.token != host_token {
         return Err(ApiError::unauthorized());
     }
-    if let Some(stage) = input.stage {
-        if !["lobby", "playing", "results"].contains(&stage.as_str()) {
+    if let Some(stage) = input.stage.as_deref() {
+        if !["lobby", "playing", "results"].contains(&stage) {
             return Err(ApiError::bad("Unknown room stage."));
         }
+    }
+    if let Some(game) = input.game.as_deref() {
+        if game_player_limits(game).is_none() {
+            return Err(ApiError::bad("Unknown game."));
+        }
+    }
+    let next_stage = input.stage.as_deref().unwrap_or(&room.stage);
+    let next_game = input.game.as_deref().or(room.game.as_deref());
+    if next_stage == "playing" && (input.stage.is_some() || input.game.is_some()) {
+        let game = next_game.ok_or_else(|| ApiError::bad("Choose a game before starting."))?;
+        if let Some(message) = player_count_error(game, room.players.len()) {
+            return Err(ApiError::bad(&message));
+        }
+    }
+    if let Some(stage) = input.stage {
         room.stage = stage;
     }
     if let Some(game) = input.game {
-        if !["draw", "point", "pass", "statue", "chorus"].contains(&game.as_str()) {
-            return Err(ApiError::bad("Unknown game."));
-        }
         room.game = Some(game);
     }
     if let Some(prompt) = input.prompt {
@@ -782,6 +824,111 @@ mod tests {
     use axum::{body::Body, http::Request};
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+
+    #[test]
+    fn player_count_rules_accept_and_reject_the_exact_boundaries() {
+        for (game, name, minimum, maximum) in [
+            ("draw", "Draw Together", 2, 10),
+            ("point", "Point Panic", 2, 10),
+            ("pass", "Pass & Guess", 3, 12),
+            ("statue", "Statue Switch", 3, 12),
+            ("chorus", "Colour Chorus", 2, 10),
+        ] {
+            assert_eq!(game_player_limits(game), Some((name, minimum, maximum)));
+            assert_eq!(player_count_error(game, minimum), None);
+            assert_eq!(player_count_error(game, maximum), None);
+            assert!(player_count_error(game, minimum - 1)
+                .unwrap()
+                .contains("Ask 1 more player to join"));
+            assert!(player_count_error(game, maximum + 1)
+                .unwrap()
+                .contains("Ask 1 player to sit out this round"));
+        }
+    }
+
+    #[tokio::test]
+    async fn claim_player_count_limits_are_enforced_at_every_boundary() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        let state = AppState::new(pool.clone());
+        let service = router(state.clone()).with_state(state);
+        let host_token = "host-boundary-token";
+
+        for (game, _name, minimum, maximum) in [
+            ("draw", "Draw Together", 2, 10),
+            ("point", "Point Panic", 2, 10),
+            ("pass", "Pass & Guess", 3, 12),
+            ("statue", "Statue Switch", 3, 12),
+            ("chorus", "Colour Chorus", 2, 10),
+        ] {
+            for (count, expected) in [
+                (minimum - 1, StatusCode::BAD_REQUEST),
+                (minimum, StatusCode::OK),
+                (maximum, StatusCode::OK),
+                (maximum + 1, StatusCode::BAD_REQUEST),
+            ] {
+                let room = InternalRoom {
+                    code: "EDGE".into(),
+                    revision: 1,
+                    stage: "lobby".into(),
+                    game: None,
+                    prompt: String::new(),
+                    language: default_language(),
+                    round: 0,
+                    players: (0..count)
+                        .map(|index| InternalPlayer {
+                            id: format!("player-{index}"),
+                            token: format!("token-{index}"),
+                            name: format!("Player {}", index + 1),
+                            mode: "solo".into(),
+                            color: "#b7d43d".into(),
+                            score: 0,
+                            x: 50.0,
+                            y: 50.0,
+                        })
+                        .collect(),
+                    drawing: vec![],
+                    target_x: 50.0,
+                    target_y: 50.0,
+                    message: String::new(),
+                };
+                let serialized = serde_json::to_string(&room).unwrap();
+                sqlx::query("INSERT INTO rooms(code, host_token, state_json) VALUES ('EDGE', ?, ?) ON CONFLICT(code) DO UPDATE SET state_json = excluded.state_json, updated_at = unixepoch()")
+                    .bind(host_token)
+                    .bind(serialized)
+                    .execute(&pool)
+                    .await
+                    .unwrap();
+                let response = service
+                    .clone()
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/EDGE/host")
+                            .header("content-type", "application/json")
+                            .header("x-forwarded-for", "203.0.113.230")
+                            .body(Body::from(
+                                json!({
+                                    "token": host_token,
+                                    "stage": "playing",
+                                    "game": game,
+                                    "prompt": "READY"
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    response.status(),
+                    expected,
+                    "{game} with {count} players returned the wrong status"
+                );
+            }
+        }
+    }
+
     #[test]
     fn public_room_never_serializes_player_tokens() {
         let room = InternalRoom {
@@ -1086,6 +1233,21 @@ mod tests {
             serde_json::from_slice(&joined.into_body().collect().await.unwrap().to_bytes())
                 .unwrap();
         let player_token = joined["token"].as_str().unwrap();
+
+        let second_join = phone
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/{code}/join"))
+                    .header("content-type", "application/json")
+                    .header("x-forwarded-for", "203.0.113.214")
+                    .body(Body::from(r#"{"name":"Second player","mode":"solo"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second_join.status(), StatusCode::OK);
 
         let started = host
             .clone()

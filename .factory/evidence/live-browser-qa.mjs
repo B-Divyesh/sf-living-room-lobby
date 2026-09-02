@@ -165,12 +165,25 @@ try {
     await phone.locator('#join-form button[type="submit"]').click();
     await phone.getByRole('heading', { name: 'Nice, ABCDEFGHIJKLMNOPQRST.' }).waitFor();
     await host.waitForFunction(() => document.body.textContent?.includes('ABCDEFGHIJKLMNOPQRST'));
+    for (const name of ['Kai', 'Mina']) {
+      const response = await host.evaluate(async ({ roomCode, playerName }) => {
+        const result = await fetch(`/api/rooms/${roomCode}/join`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: playerName, mode: 'solo' }),
+        });
+        return { status: result.status, body: await result.json() };
+      }, { roomCode: code, playerName: name });
+      assert.equal(response.status, 200, `${name} could not join the live room: ${JSON.stringify(response.body)}`);
+    }
+    await host.waitForFunction(() => document.querySelectorAll('.player').length === 3);
     await host.locator('[data-game="draw"]').focus();
     await host.keyboard.press('ArrowRight');
     const remoteMoved = await host.locator('[data-game="point"]').evaluate((element) => document.activeElement === element);
     await host.keyboard.press('ArrowLeft');
     await host.keyboard.press('Enter');
     await host.locator('#tv-canvas').waitFor();
+    const remoteChosen = await host.getByRole('heading', { name: /Draw Together/i }).isVisible();
     await phone.locator('#draw-pad').waitFor();
     await host.locator('#end-game').click();
     await phone.locator('#leave-room').waitFor();
@@ -178,7 +191,7 @@ try {
     await phone.locator('#pass-card').waitFor();
     await phone.locator('#pass-card').click();
     const passHeading = await phone.locator('h1').textContent();
-    evidence.realRoom = { code, readStatuses, remoteMoved, passHeading, hostErrors, phoneErrors };
+    evidence.realRoom = { code, readStatuses, remoteMoved, remoteChosen, passHeading, hostErrors, phoneErrors };
     await hostContext.close();
     await phoneContext.close();
   }
