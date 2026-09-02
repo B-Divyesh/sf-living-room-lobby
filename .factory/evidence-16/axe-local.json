@@ -1,0 +1,42 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "violations": 0,
+    "title": "Living Room Lobby — party games for your TV",
+    "h1": 1,
+    "main": 1
+  },
+  {
+    "path": "/demo",
+    "status": 200,
+    "violations": 0,
+    "title": "Demo — Living Room Lobby",
+    "h1": 1,
+    "main": 1
+  },
+  {
+    "path": "/privacy",
+    "status": 200,
+    "violations": 0,
+    "title": "Privacy — Living Room Lobby",
+    "h1": 1,
+    "main": 1
+  },
+  {
+    "path": "/terms",
+    "status": 200,
+    "violations": 0,
+    "title": "Terms — Living Room Lobby",
+    "h1": 1,
+    "main": 1
+  },
+  {
+    "path": "/review-3-missing",
+    "status": 404,
+    "violations": 0,
+    "title": "Page not found — Living Room Lobby",
+    "h1": 1,
+    "main": 1
+  }
+]

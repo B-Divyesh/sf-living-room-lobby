@@ -1,0 +1,690 @@
+
+=== shared-tv-phone-round ===
+npm run test:browser -- --grep @claim:shared-tv-phone-round
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:shared-tv-phone-round
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 84ms
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling libc v0.2.189
+   Compiling syn v3.0.4
+   Compiling syn v2.0.119
+   Compiling cfg-if v1.0.4
+   Compiling synstructure v0.13.2
+   Compiling futures-core v0.3.34
+   Compiling pin-project-lite v0.2.17
+   Compiling zerofrom-derive v0.1.7
+   Compiling yoke-derive v0.8.2
+   Compiling stable_deref_trait v1.2.1
+   Compiling zerovec-derive v0.11.6
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.3
+   Compiling displaydoc v0.2.7
+   Compiling bytes v1.12.1
+   Compiling zerovec v0.11.8
+   Compiling find-msvc-tools v0.1.11
+   Compiling once_cell v1.21.4
+   Compiling shlex v2.0.1
+   Compiling itoa v1.0.18
+   Compiling cc v1.4.4
+   Compiling tinystr v0.8.4
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling icu_locale_core v2.3.0
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.2
+   Compiling version_check v0.9.5
+   Compiling serde_core v1.0.229
+   Compiling utf8_iter v1.0.4
+   Compiling icu_normalizer_data v2.3.0
+   Compiling memchr v2.8.3
+   Compiling icu_collections v2.3.0
+   Compiling generic-array v0.14.7
+   Compiling icu_provider v2.3.1
+   Compiling icu_properties_data v2.3.0
+   Compiling ring v0.17.14
+   Compiling scopeguard v1.2.0
+   Compiling futures-task v0.3.34
+   Compiling futures-io v0.3.34
+   Compiling typenum v1.20.1
+   Compiling slab v0.4.12
+   Compiling lock_api v0.4.14
+   Compiling tracing-attributes v0.1.31
+   Compiling parking_lot_core v0.9.12
+   Compiling futures-sink v0.3.34
+   Compiling zeroize v1.9.0
+   Compiling serde v1.0.229
+   Compiling smallvec v1.15.2
+   Compiling rustls-pki-types v1.15.1
+   Compiling icu_properties v2.3.0
+   Compiling serde_derive v1.0.229
+   Compiling untrusted v0.9.0
+   Compiling percent-encoding v2.3.2
+   Compiling errno v0.3.14
+   Compiling zmij v1.0.23
+   Compiling signal-hook-registry v1.4.8
+   Compiling form_urlencoded v1.2.2
+   Compiling block-buffer v0.10.4
+   Compiling tracing-core v0.1.36
+   Compiling tokio-macros v2.7.2
+   Compiling serde_json v1.0.151
+   Compiling tokio v1.53.1
+   Compiling log v0.4.34
+   Compiling equivalent v1.0.2
+   Compiling crossbeam-utils v0.8.22
+   Compiling rustls v0.23.43
+   Compiling getrandom v0.2.17
+   Compiling cpufeatures v0.2.17
+   Compiling allocator-api2 v0.2.21
+   Compiling autocfg v1.5.1
+   Compiling foldhash v0.1.5
+   Compiling thiserror v2.0.20
+   Compiling subtle v2.6.1
+   Compiling hashbrown v0.15.5
+   Compiling num-traits v0.2.19
+   Compiling tracing v0.1.44
+   Compiling icu_normalizer v2.3.0
+   Compiling webpki-roots v1.0.9
+   Compiling futures-util v0.3.34
+   Compiling thiserror-impl v2.0.20
+   Compiling vcpkg v0.2.15
+   Compiling parking v2.2.1
+   Compiling hashbrown v0.17.1
+   Compiling crc-catalog v2.5.0
+   Compiling pkg-config v0.3.34
+   Compiling indexmap v2.14.0
+   Compiling libsqlite3-sys v0.30.1
+   Compiling crc v3.4.0
+   Compiling event-listener v5.4.2
+   Compiling webpki-roots v0.26.11
+   Compiling idna_adapter v1.2.2
+   Compiling crossbeam-queue v0.3.13
+   Compiling hashlink v0.10.0
+   Compiling either v1.18.0
+   Compiling spin v0.9.9
+   Compiling crypto-common v0.1.7
+   Compiling http v1.5.0
+   Compiling base64 v0.22.1
+   Compiling ryu v1.0.23
+   Compiling serde_urlencoded v0.7.1
+   Compiling http-body v1.1.0
+   Compiling rustls-webpki v0.103.15
+   Compiling digest v0.10.7
+   Compiling parking_lot v0.12.5
+   Compiling idna v1.1.0
+   Compiling tokio-stream v0.1.19
+   Compiling url v2.5.8
+   Compiling atoi v2.0.0
+   Compiling futures-intrusive v0.5.0
+   Compiling sha2 v0.10.9
+   Compiling futures-channel v0.3.34
+   Compiling tower-service v0.3.3
+   Compiling zerocopy v0.8.56
+   Compiling httparse v1.10.1
+   Compiling sqlx-core v0.8.6
+   Compiling futures-executor v0.3.34
+   Compiling flume v0.11.1
+   Compiling tower-layer v0.3.3
+   Compiling mime v0.3.17
+   Compiling unicase v2.9.0
+   Compiling httpdate v1.0.3
+   Compiling rustversion v1.0.23
+   Compiling mime_guess v2.0.5
+   Compiling sqlx-sqlite v0.8.6
+   Compiling http-body-util v0.1.5
+   Compiling atomic-waker v1.1.2
+   Compiling regex-syntax v0.8.11
+   Compiling heck v0.5.0
+   Compiling dotenvy v0.15.7
+   Compiling sync_wrapper v1.0.2
+   Compiling hex v0.4.3
+   Compiling sqlx-macros-core v0.8.6
+   Compiling regex-automata v0.4.18
+   Compiling hyper v1.11.0
+   Compiling ppv-lite86 v0.2.21
+   Compiling rand_core v0.6.4
+   Compiling async-trait v0.1.92
+   Compiling lazy_static v1.5.0
+   Compiling sharded-slab v0.1.7
+   Compiling rand_chacha v0.3.1
+   Compiling axum-core v0.4.5
+   Compiling hyper-util v0.1.20
+   Compiling matchers v0.2.0
+   Compiling sqlx-macros v0.8.6
+   Compiling tower v0.5.3
+   Compiling tokio-util v0.7.19
+   Compiling tracing-log v0.2.0
+   Compiling tracing-serde v0.2.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling thread_local v1.1.10
+   Compiling http-range-header v0.4.2
+   Compiling bitflags v2.13.1
+   Compiling nu-ansi-term v0.50.3
+   Compiling matchit v0.7.3
+   Compiling tracing-subscriber v0.3.23
+   Compiling axum v0.7.9
+   Compiling tower-http v0.6.11
+   Compiling sqlx v0.8.6
+   Compiling rand v0.8.8
+   Compiling living-room-lobby v1.0.0 (/tmp/living-room-lobby-claims-cDswCD)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 16s
+Browser regression checks passed.
+
+=== join-code-path ===
+npm run test:browser -- --grep @claim:join-code-path
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:join-code-path
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 80ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
+Browser regression checks passed.
+
+=== language-light-round ===
+npm run test:browser -- --grep @claim:language-light-round
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:language-light-round
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 81ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.19s
+Browser regression checks passed.
+
+=== art-provenance ===
+node --test --test-name-pattern @claim:art-provenance scripts/product-contract.test.mjs
+TAP version 13
+# Subtest: @claim:art-provenance the footer disclosure matches the shipped original asset record
+ok 1 - @claim:art-provenance the footer disclosure matches the shipped original asset record
+  ---
+  duration_ms: 7.963269
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 94.786935
+
+=== demo-sandbox ===
+npm run test:browser -- --grep @claim:demo-sandbox
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:demo-sandbox
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 77ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
+Browser regression checks passed.
+
+=== account-free-sample ===
+npm run test:browser -- --grep @claim:account-free-sample
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:account-free-sample
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 89ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.14s
+Browser regression checks passed.
+
+=== no-account-required ===
+npm run test:browser -- --grep @claim:no-account-required
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:no-account-required
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 88ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== real-room-session-storage ===
+npm run test:browser -- --grep @claim:real-room-session-storage
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:real-room-session-storage
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 84ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== browser-storage-clear ===
+npm run test:browser -- --grep @claim:browser-storage-clear
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:browser-storage-clear
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 87ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== demo-real-room-isolation ===
+npm run test:browser -- --grep @claim:demo-real-room-isolation
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:demo-real-room-isolation
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 81ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== offline-reload ===
+npm run test:browser -- --grep @claim:offline-reload
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:offline-reload
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 81ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== same-origin-requests ===
+npm run test:browser -- --grep @claim:same-origin-requests
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:same-origin-requests
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 76ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== remote-controls ===
+npm run test:browser -- --grep @claim:remote-controls
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:remote-controls
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 79ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== shared-phone ===
+npm run test:browser -- --grep @claim:shared-phone
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:shared-phone
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 89ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== family-pack-unavailable ===
+npm run test:browser -- --grep @claim:family-pack-unavailable
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:family-pack-unavailable
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 82ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== free-game-availability ===
+npm run test:browser -- --grep @claim:free-game-availability
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:free-game-availability
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 95ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== player-count-limits ===
+npm run test:browser -- --grep @claim:player-count-limits && cargo test --locked claim_player_count_limits_are_enforced_at_every_boundary
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:player-count-limits
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 82ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+   Compiling living-room-lobby v1.0.0 (/tmp/living-room-lobby-claims-cDswCD)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.94s
+     Running unittests src/main.rs (target/debug/deps/living_room_lobby-e8547f6d57394c35)
+
+running 1 test
+test rooms::tests::claim_player_count_limits_are_enforced_at_every_boundary ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.06s
+
+
+=== shared-tv-canvas ===
+npm run test:browser -- --grep @claim:shared-tv-canvas
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:shared-tv-canvas
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 79ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== point-controls ===
+npm run test:browser -- --grep @claim:point-controls
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:point-controls
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 90ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== room-retention ===
+cargo test --locked claim_real_room_retention_expires_after_six_hours
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running unittests src/main.rs (target/debug/deps/living_room_lobby-e8547f6d57394c35)
+
+running 1 test
+test rooms::tests::claim_real_room_retention_expires_after_six_hours ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.01s
+
+
+=== no-advertising-or-analytics ===
+npm run test:browser -- --grep @claim:no-advertising-or-analytics
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:no-advertising-or-analytics
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 85ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+Browser regression checks passed.
+
+=== minimal-join-data ===
+npm run test:browser -- --grep @claim:minimal-join-data
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:minimal-join-data
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 82ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
+Browser regression checks passed.
+
+=== license-status ===
+npm run test:browser -- --grep @claim:license-status
+
+> living-room-lobby@1.0.0 test:browser
+> VITE_BUILD_ID=${LRL_BROWSER_BUILD_ID:-0123456789abcdef0123456789abcdef01234567} npm run build && cargo build --locked && node frontend/e2e/product-regression.mjs --grep @claim:license-status
+
+
+> living-room-lobby@1.0.0 build
+> vite build --config frontend/vite.config.ts
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  2.04 kB │ gzip:  0.70 kB
+dist/assets/index-B2lU5tGs.css  19.17 kB │ gzip:  5.29 kB
+dist/assets/index-B0SWWpbk.js   58.02 kB │ gzip: 21.20 kB │ map: 211.43 kB
+
+✓ built in 75ms
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
+Browser regression checks passed.
+
+Passed 23 claim commands from this clean clone.
