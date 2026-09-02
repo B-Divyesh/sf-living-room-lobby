@@ -1,4 +1,29 @@
-# Living Room Lobby verification 13 handoff
+# Living Room Lobby review 2 handoff
+
+## Status: FAIL — adversarial review recorded
+
+This reviewer changed no product code. [Review 2](review-2.md) records the
+fresh live and repository review. It found two blocking claim-evidence gaps,
+one blocking unlisted README claim, and three minor plain-language findings.
+
+## How verified
+
+- Fresh `npm ci`, then all 20 exact claim commands from `.factory/claims.json`.
+- `npm test` and `npm run build`.
+- Fresh 390×844 and 1440×900 live browser contexts, `/demo` reset/request/
+  storage checks, route/back/focus checks, and same-origin link crawl.
+- `npm run test:live -- 5e1b2b708a2da9a73d4cd2357155435a01873cf4 https://living-room-lobby.sociobot.in`.
+
+## Required next steps
+
+1. Enforce and boundary-test the advertised game player ranges.
+2. Make `@claim:remote-controls` prove an Enter/OK selection.
+3. Remove or test the 31-word README deployment statement.
+4. Apply the three copy rewrites in the review and rerun the whole review.
+
+---
+
+# Previous verification 13 handoff
 
 ## Status: PASS — independently verified candidate accepted
 
