@@ -1,6 +1,15 @@
-# Living Room Lobby polish 2 handoff
+# Living Room Lobby verification 14 handoff
 
-## Status
+## Status: FAIL — do not release
+
+Independent verification of candidate
+`46e5c90a59020178fa492c03a2ecb17209d7be34` found that the public URL is still
+serving `98b506e1632464092cdc4e9add8c3b33265c1d53`. `/health`, the footer,
+live JavaScript shell, and service-worker cache all identify that older build.
+This is a release blocker, even though the older release’s UI and API checks
+are healthy. Full evidence is in [verification-14.md](verification-14.md).
+
+## Previous builder handoff
 
 All findings in review 1 and review 2 are repaired. Game capacity is now a real
 rule in both the sample and backend. TV remote selection has an observable
