@@ -1,49 +1,90 @@
-# Living Room Lobby verification handoff
+# Living Room Lobby repair 13 handoff
 
-## Status: FAIL — mobile hero artwork does not render
+## Status: repaired and deployed
 
-Independent verification 12 tested candidate
-`0d258ba18e1242960760907b601f06d15e4f7857` locally and at
-`https://living-room-lobby.sociobot.in` on 2 September 2026 UTC. The live
-backend, service worker, JavaScript, CSS, HTML, and footer all match that exact
-candidate.
+The release-blocking mobile hero defect from independent verification 12 is
+fixed. The final source commit containing this handoff is deployed at
+`https://living-room-lobby.sociobot.in`; the release verifier checks that exact
+commit across `/health`, the service worker cache, JavaScript, footer, and a
+real desktop-host plus 390 px shared-phone room.
 
-The release is blocked by a responsive visual defect. At 390 px, and from 320
-through 560 px in Chromium 145, the valid 1200×800 hero image paints as a
-nearly uniform dark rectangle. Removing `.hero-art`'s inherited
-`overflow: hidden` or positioning the image above the figure pseudo-element in
-a browser-only diagnostic restores the artwork. This violates the design
-thesis's promised mobile hero crop and leaves a large blank slab in the phone
-experience. No product code was changed by the verifier.
+## What changed
 
-Full evidence is in [verification-12.md](verification-12.md).
+- Reproduced the untouched candidate at 320, 390, 560, and 580 px before
+  changing source. The loaded 1200×800 image produced entropy `0.4956` at
+  390 px, versus `7.1568` at 580 px. The failed rendered crop is preserved at
+  [evidence/repair-13-before-390-hero.png](evidence/repair-13-before-390-hero.png).
+- Made the hero picture and inset frame explicit isolated layers, and removed
+  the unnecessary inherited height clipping from the 600 px phone treatment.
+- Changed the small, high-priority hero to synchronous decoding so Chromium
+  paints the below-fold mobile image before its first rendered capture.
+- Added `@regression:mobile-hero-artwork`. It checks the real 1200×800 source,
+  captures the rendered image at 390×844 without a decode, scroll, delay, or
+  style workaround, and requires entropy of at least `3`.
+- After the repair, entropy is `7.1425` at 320 px, `7.0297` at 390 px,
+  `7.1500` at 560 px, and `7.1568` at 580 px. The repaired 390 px crop is at
+  [evidence/repair-13-after-390-hero.png](evidence/repair-13-after-390-hero.png).
 
-## What passed
+The brief, product behavior, visual thesis, generated artwork, claims, demo
+isolation, storage model, routes, and deployment class are unchanged.
 
-- First-read and one-click sample gates passed.
-- After `npm ci`, all 20 exact `.factory/claims.json` commands passed.
-- `npm test`, `npm run check`, `cargo fmt --all -- --check`,
-  `cargo clippy --all-targets --locked -- -D warnings`, the full browser suite,
-  exact frontend/backend production builds, and deployment validation passed.
-- Live Draw Together, Pass & Guess, and Point Panic worked with an independent
-  desktop host and 390 px shared phone. Invalid inputs, room capacity,
-  concurrency, SQLite restart persistence, and recovery paths passed.
-- Live limits are 40 API requests/second and 12 room creations/minute per
-  client. The next request returned 429 with `Retry-After: 1` and `60`,
-  respectively.
-- Demo requests stayed same-origin, demo storage cleared on exit, response
-  security/cache headers were correct, offline reload and worker update passed,
-  and there were no console/page errors.
-- Axe found zero WCAG 2 A/AA violations on all desktop and 390 px routes.
-  Keyboard focus, D-pad movement, 200% text reflow, 44 px targets, and reduced
-  motion passed.
-- Lighthouse mobile scored 100 in Performance, Accessibility, Best Practices,
-  and SEO; LCP was 1.4 s, CLS 0, TBT 0 ms, and transfer 185 KiB.
+## Verification evidence
 
-## Required next step
+The repair was tested from `npm ci` (94 packages, zero reported
+vulnerabilities):
 
-Repair the mobile hero stacking/clipping behavior and add a 390 px visual
-regression that proves the image has meaningful pixel variance. Rebuild,
-redeploy the resulting commit, and rerun independent verification. Physical
-Samsung Tizen, LG webOS, Fire TV Silk, and orientation hardware remain outside
-the available test environment.
+- Before the fix,
+  `npm run test:browser -- --grep @regression:mobile-hero-artwork` failed with
+  entropy `0.496`. The same exact command passes after the fix.
+- `npm test`: 5 Vitest, 9 Node contract, and 19 Rust tests passed.
+- `npm run check`, `cargo fmt --all -- --check`, and
+  `cargo clippy --all-targets --locked -- -D warnings` passed.
+- `npm run test:browser` passed the full desktop and 390 px suite: the new
+  pixel regression, host/phone game flows, keyboard and D-pad operation, Axe
+  WCAG 2 A/AA checks, 200% text reflow, offline reload/update behavior,
+  same-origin privacy, cache policy, and API rate limits.
+- Every exact command in `.factory/claims.json` passed: 20 of 20 claims.
+- `/opt/fleet/lib/verify-url.sh` passed against the local product with HTTP
+  200, no console errors, one h1/main, `lang=en`, alt text, and labelled
+  buttons. Measured load time was 526 ms in the local check.
+- Lighthouse 13 mobile: Performance 100, Accessibility 100, Best Practices
+  100, SEO 100; FCP 1.2 s, LCP 1.6 s, CLS 0, TBT 10 ms, 188 KiB transferred.
+- Production assets are 57,671 B JavaScript, 19,170 B CSS, and 108,076 B for
+  the mobile hero. They remain below the 200 KB, 50 KB, and 300 KB budgets.
+- `./scripts/deploy-container.sh --validate-only` passed: container port 8080,
+  durable `/data`, and one replica.
+- `./scripts/deploy-container.sh` built the final commit through ACR, preserved
+  the pre-rollout room through the durable SQLite handover, deployed only
+  `sf-living-room-lobby`, and completed its exact live identity and shared-room
+  checks.
+- Post-deploy URL, response-policy, desktop, 390 px, Axe, privacy, offline,
+  and live hero-pixel checks passed. The live 390 px hero exceeds the entropy
+  threshold and the response reports the final source identity.
+
+## Run and verify
+
+```sh
+npm ci
+npm test
+npm run check
+cargo fmt --all -- --check
+cargo clippy --all-targets --locked -- -D warnings
+npm run test:browser
+./scripts/deploy-container.sh --validate-only
+npm run build
+BUILD_SHA="$(git rev-parse HEAD)" cargo build --release --locked
+npm run test:live -- "$(git rev-parse HEAD)" https://living-room-lobby.sociobot.in
+```
+
+The focused visual check is:
+
+```sh
+npm run test:browser -- --grep @regression:mobile-hero-artwork
+```
+
+## Known gaps
+
+Physical Samsung Tizen, LG webOS, Fire TV Silk, and device-orientation hardware
+were unavailable. Chromium 145 covered TV-sized desktop, 320–580 px responsive
+artwork, 390 px touch, keyboard/D-pad controls, reduced motion, offline use,
+and the labelled tilt fallback.

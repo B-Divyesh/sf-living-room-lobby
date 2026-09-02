@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { chromium } from 'playwright';
+import sharp from 'sharp';
 
 const root = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const port = Number(process.env.LRL_E2E_PORT || 18181);
@@ -291,6 +292,31 @@ async function checkMobileFirstViewport(browser) {
       action.y >= 0 && action.y + action.height <= 844,
       `The sample action must fit the cold 390×844 viewport, but occupied y=${action.y}–${action.y + action.height}.`,
     );
+  } finally {
+    await context.close();
+  }
+}
+
+async function checkMobileHeroArtwork(browser) {
+  // Regression for verification 12: Chromium loaded the 1200x800 source at
+  // 390 px, but the initial rendered crop was a nearly uniform concrete slab
+  // (entropy 0.496). Measure the pixels a visitor actually sees without
+  // decode(), scrolling, or a style mutation that could hide a first-paint bug.
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    const image = page.locator('.hero-art img');
+    const source = await image.evaluate((element) => ({
+      complete: element.complete,
+      naturalWidth: element.naturalWidth,
+      naturalHeight: element.naturalHeight,
+    }));
+    assert.deepEqual(source, { complete: true, naturalWidth: 1200, naturalHeight: 800 }, 'The mobile hero source did not load.');
+
+    const renderedCrop = await image.screenshot();
+    const { entropy } = await sharp(renderedCrop).stats();
+    assert.ok(entropy >= 3, `The 390 px hero artwork must have meaningful visible pixel variance; measured entropy ${entropy.toFixed(3)}.`);
   } finally {
     await context.close();
   }
@@ -810,6 +836,7 @@ try {
     if (included('@claim:demo-real-room-isolation') || !grep) await checkDemoRealRoomIsolation(browser);
     if (included('@regression:mobile-a11y') || !grep) await checkMobileCatalogueAndPointA11y(browser);
     if (included('@regression:mobile-first-viewport') || !grep) await checkMobileFirstViewport(browser);
+    if (included('@regression:mobile-hero-artwork') || !grep) await checkMobileHeroArtwork(browser);
     if (included('@regression:mobile-text-resize-reflow') || !grep) await checkMobileTextResizeReflow(browser);
     if (included('@regression:desktop-first-viewport') || !grep) await checkDesktopFirstViewport(browser);
     if (included('@regression:prompt-rail-geometry') || !grep) await checkPromptRailGeometry(browser);

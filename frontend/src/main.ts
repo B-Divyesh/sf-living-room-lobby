@@ -131,7 +131,7 @@ function renderHome(): void {
         <ul class="plain-facts"><li>Try the sample without an account.</li><li>Sample play never changes a real room.</li><li>Extra games are not available yet.</li></ul>
         <p class="remote-hint"><kbd>↑</kbd><kbd>↓</kbd><kbd>OK</kbd> Use a TV remote to move and choose.</p>
       </div>
-      <figure class="hero-art"><picture><img src="/assets/lobby-hero.webp" width="1536" height="1024" alt="A cozy concrete living room with chairs, cushions, a shared phone and playful hands pointing at a television" fetchpriority="high" decoding="async"></picture><figcaption>The TV shows the game while players share or use phones.</figcaption></figure>
+      <figure class="hero-art"><picture><img src="/assets/lobby-hero.webp" width="1536" height="1024" alt="A cozy concrete living room with chairs, cushions, a shared phone and playful hands pointing at a television" fetchpriority="high" decoding="sync"></picture><figcaption>The TV shows the game while players share or use phones.</figcaption></figure>
     </section>
     <section class="join-panel ${joinCode ? 'open' : ''}" id="join-panel" aria-labelledby="join-title">
       <div><h2 id="join-title">Enter the room code</h2><p>Use the code shown on the TV.</p></div>
